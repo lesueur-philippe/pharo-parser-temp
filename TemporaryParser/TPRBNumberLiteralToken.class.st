@@ -1,0 +1,22 @@
+"
+I am a number literal token. 
+Special handling is needed for converting a negative literal token if it is part of a binary message send. In an expression like
+a - 1
+the scanner produces the tokens 'a' and '-1'. This will be converted to the token
+'a', the binary selector token '-' and the number literal token '1'.
+"
+Class {
+	#name : #TPRBNumberLiteralToken,
+	#superclass : #TPRBLiteralToken,
+	#category : #'TemporaryParser-Tokens'
+}
+
+{ #category : #testing }
+TPRBNumberLiteralToken >> isNumberLiteralToken [
+	^true.
+]
+
+{ #category : #printing }
+TPRBNumberLiteralToken >> storeOn: aStream [ 
+	aStream nextPutAll: source
+]

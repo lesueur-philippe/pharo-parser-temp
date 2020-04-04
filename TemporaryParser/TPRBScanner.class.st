@@ -1,0 +1,629 @@
+"
+RBScanner is a stream that returns a sequence of tokens from the string. The tokens know where they came from in the source code and which comments were attached to them.
+
+Instance Variables:
+	buffer	<PositionableStream>	Accumulates the text for the current token.
+	characterType	<ByteSymbol>	The type of the next character. (e.g. #alphabetic, etc.)
+	classificationTable	<Array of: Symbol>	Mapping from Character values to their characterType.
+	comments	<Collection of: Interval>	Source intervals of scanned comments that must be attached to the next token.
+	currentCharacter	<Character>	The character currently being processed.
+	errorBlock	<BlockClosure>	The block to execute on lexical errors.
+	extendedLiterals	<Boolean>	True if IBM-type literals are allowed. In VW, this is false.
+	nameSpaceCharacter	<Character>	The character used to separate namespaces.
+	numberType	<ByteSymbol>	The method to perform: to scan a number. 
+	separatorsInLiterals	<Boolean>	True if separators are allowed within literals.
+	stream	<PositionableStream>	Contains the text to be scanned.
+	tokenStart	<Integer>	The source position of the beginning of the current token
+
+Class Instance Variables:
+	classificationTable	<Array>		the default classification table for all characters
+
+Shared Variables:
+	PatternVariableCharacter	<Character>	the character that starts a pattern node
+"
+Class {
+	#name : #TPRBScanner,
+	#superclass : #Object,
+	#instVars : [
+		'stream',
+		'buffer',
+		'tokenStart',
+		'currentCharacter',
+		'characterType',
+		'classificationTable',
+		'comments',
+		'errorBlock'
+	],
+	#classVars : [
+		'CascadePatternCharacter',
+		'KeywordPatternCharacter',
+		'PatternVariableCharacter'
+	],
+	#classInstVars : [
+		'classificationTable'
+	],
+	#category : #'TemporaryParser-Parser'
+}
+
+{ #category : #accessing }
+TPRBScanner class >> cascadePatternCharacter [
+	^ CascadePatternCharacter
+]
+
+{ #category : #accessing }
+TPRBScanner class >> classificationTable [
+	classificationTable 
+		ifNil: [ self initializeClassificationTable ].
+	^ classificationTable
+]
+
+{ #category : #'class initialization' }
+TPRBScanner class >> initialize [
+	self initializeClassificationTable
+]
+
+{ #category : #'class initialization' }
+TPRBScanner class >> initializeChars: characters to: aSymbol [ 
+	characters do: [:c | classificationTable at: c asInteger put: aSymbol]
+]
+
+{ #category : #'class initialization' }
+TPRBScanner class >> initializeClassificationTable [
+	PatternVariableCharacter := $`.
+	KeywordPatternCharacter := $@.
+	CascadePatternCharacter := $;.
+	classificationTable := Array new: 255.
+	self 
+		initializeChars: (Character allCharacters
+			select: [ :each | each isLetter ])
+		to: #alphabetic.
+	self initializeUnderscore.
+	self initializeChars: '01234567890' to: #digit.
+	self initializeChars: Character specialCharacters to: #binary.
+	self initializeChars: '().:;[]{}^' to: #special.
+	self
+		initializeChars: (Character allCharacters
+			select: [ :each | each isSeparator ])
+		to: #separator
+]
+
+{ #category : #'class initialization' }
+TPRBScanner class >> initializeUnderscore [
+	self classificationTable
+		at: $_ asInteger
+		put: #alphabetic
+]
+
+{ #category : #testing }
+TPRBScanner class >> isSelector: aSymbol [
+	| scanner |
+	scanner := self basicNew.
+	scanner on: (ReadStream on: aSymbol asString).
+	scanner step.
+	^ scanner isSelector
+]
+
+{ #category : #testing }
+TPRBScanner class >> isVariable: aString [ 
+	| scanner token |
+	scanner := self on: (ReadStream on: aString).
+	token := scanner next.
+	token isIdentifier ifFalse: [^false].
+	(token start = 1 and: [token stop = aString size]) ifFalse: [^false].
+	^(aString includes: $.) not
+]
+
+{ #category : #accessing }
+TPRBScanner class >> keywordPatternCharacter [
+	^ KeywordPatternCharacter
+]
+
+{ #category : #'instance creation' }
+TPRBScanner class >> new [
+	self initializeUnderscore.
+	^ super new
+]
+
+{ #category : #'instance creation' }
+TPRBScanner class >> on: aStream [ 
+	| str |
+	str := self new on: aStream.
+	str
+		step;
+		stripSeparators.
+	^str
+]
+
+{ #category : #'instance creation' }
+TPRBScanner class >> on: aStream errorBlock: aBlock [ 
+	| str |
+	str := self new on: aStream.
+	str
+		errorBlock: aBlock;
+		step;
+		stripSeparators.
+	^str
+]
+
+{ #category : #accessing }
+TPRBScanner class >> patternVariableCharacter [
+	^ PatternVariableCharacter
+]
+
+{ #category : #'public api' }
+TPRBScanner class >> scanTokenObjects: aStringOrStream [
+	"Return the tokens objects."
+	
+	| scanner |
+	scanner := self on: aStringOrStream readStream.
+	^ scanner contents
+]
+
+{ #category : #'public api' }
+TPRBScanner class >> scanTokens: aStringOrStream [
+	"Return the tokens (and not the scanner token objects)."
+	
+	| scanner |
+	scanner := self on: aStringOrStream readStream.
+	^scanner contents collect:[ :t | t value ]
+]
+
+{ #category : #testing }
+TPRBScanner >> atEnd [
+	^characterType = #eof
+]
+
+{ #category : #private }
+TPRBScanner >> classify: aCharacter [
+
+	| index |
+
+	aCharacter ifNil: [ ^ nil ].
+	index := aCharacter asInteger.
+	index == 0
+		ifTrue: [ ^ #separator ].
+	index > 255
+		ifTrue: [ ^ aCharacter isLetter
+				ifTrue: [ #alphabetic ]
+				ifFalse: [ aCharacter isSeparator
+						ifTrue: [ #separator ]
+						ifFalse: [ nil ]
+					]
+			].
+	^ classificationTable at: index
+]
+
+{ #category : #accessing }
+TPRBScanner >> contents [
+	| contentsStream |
+	contentsStream := (Array new: 50) writeStream.
+	[ self atEnd ]
+		whileFalse: [ contentsStream nextPut: self next ].
+	^ contentsStream contents
+]
+
+{ #category : #'error handling' }
+TPRBScanner >> errorBlock [
+	^errorBlock ifNil: [[:message :position | ]] ifNotNil: [errorBlock]
+]
+
+{ #category : #accessing }
+TPRBScanner >> errorBlock: aBlock [ 
+	errorBlock := aBlock
+]
+
+{ #category : #'error handling' }
+TPRBScanner >> errorPosition [
+	^stream position
+]
+
+{ #category : #accessing }
+TPRBScanner >> getComments [
+	| oldComments |
+	comments isEmpty ifTrue: [^nil].
+	oldComments := comments.
+	comments := OrderedCollection new: 1.
+	^oldComments
+]
+
+{ #category : #testing }
+TPRBScanner >> isSelector [
+	characterType = #binary
+		ifTrue: [ [ characterType = #binary ] whileTrue: [ self step ].
+			^ characterType = #eof ].
+	characterType ~= #alphabetic
+		ifTrue: [ ^ false ].
+	^ self isSelectorNonBinary
+]
+
+{ #category : #testing }
+TPRBScanner >> isSelectorNonBinary [
+	"inspect the next line and view as morph"
+
+	"ZnEasy getPng: 'http://www.plantuml.com/plantuml/png/RO-n2i8m48RtUugRXRn0XzBg98wEuX2R4mlNHE8LwTkRL4Xxa2cNx_z2_ki-OgFC4mF8A4nu9QP1GeJRuOx6j7WSlOqBDlXOXy9xVhzipy5Joco-m0vfeoQuP9n2cjFp8PygRJ7_qo259m2ide8REliBBTyGNQa16p9LGUUw1C1_uThk9TBrEl9kdlW7'"
+
+	| state |
+	state := #alphaAlone.
+	[ characterType = #alphabetic ]
+		whileTrue: [ state = #colon
+				ifTrue: [ state := #inKeyword ].
+			self scanName.
+			characterType = #eof
+				ifTrue: [ ^ state = #alphaAlone ].
+			currentCharacter = $:
+				ifTrue: [ state := #colon.
+					self step ] ].
+	characterType = #eof
+		ifTrue: [ ^ state = #colon ].
+	^ false
+
+	"Diagram by:
+@startuml
+
+title Selector
+[*] --> Binary : binary
+[*] --> AlphaAlone : alpha
+AlphaAlone --> AlphaAlone: alpha
+AlphaAlone -d-> Colon : colon
+AlphaAlone -> [*] : eof
+
+
+Colon -> [*] : eof
+Colon -> InKeyword : alpha
+
+InKeyword --> InKeyword : alpha
+InKeyword --> Colon : colon
+
+
+Binary --> Binary : binary
+Binary --> [*] : eof
+
+@enduml"
+]
+
+{ #category : #accessing }
+TPRBScanner >> next [
+	| token |
+	buffer reset.
+	tokenStart := stream position.
+	token := characterType = #eof 
+				ifTrue: 
+					[TPRBToken start: tokenStart + 1	"The EOF token should occur after the end of input"]
+				ifFalse: [self scanToken].
+	self stripSeparators.
+	token comments: self getComments.
+	^token
+]
+
+{ #category : #accessing }
+TPRBScanner >> nextPut: anObject [ 
+	"Provide an error notification that the receiver does not
+	implement this message."
+
+	self shouldNotImplement
+]
+
+{ #category : #initialization }
+TPRBScanner >> on: aStream [ 
+	buffer := (String new: 60) writeStream.
+	stream := aStream.
+	classificationTable := self class classificationTable.
+	comments := OrderedCollection new
+]
+
+{ #category : #'error handling' }
+TPRBScanner >> parseErrorNode: aMessageString [
+	| sourceString |
+	sourceString := stream contents copyFrom: self errorPosition to: stream contents size.
+	^ TPRBParseErrorNode
+		errorMessage: aMessageString value: sourceString at: self errorPosition
+]
+
+{ #category : #private }
+TPRBScanner >> previousStepPosition [
+	^characterType = #eof 
+		ifTrue: [stream position]
+		ifFalse: [stream position - 1]
+]
+
+{ #category : #'private-scanning' }
+TPRBScanner >> scanAnySymbol [
+	characterType = #alphabetic ifTrue: [^self scanSymbol].
+	characterType = #binary ifTrue: [^self scanBinary: TPRBLiteralToken].
+	^TPRBToken new
+]
+
+{ #category : #'private-scanning' }
+TPRBScanner >> scanBinary: aClass [ 
+	| val |
+	buffer nextPut: currentCharacter.
+	self step.
+	[ characterType = #binary ] whileTrue: 
+		[ buffer nextPut: currentCharacter.
+		self step ].
+	val := buffer contents.
+	val := val asSymbol.
+	^aClass value: val start: tokenStart
+]
+
+{ #category : #'private-scanning' }
+TPRBScanner >> scanError: theCause [
+	| location |
+	"error location is the next not parseable character. Or current stream position + 1 if 
+	an expected character is missing."
+	location := stream position.
+	currentCharacter
+		ifNotNil: [ :char | buffer nextPut: char ]
+		ifNil: [ location := stream position + 1 ].
+	^ TPRBErrorToken
+		value: buffer contents asString
+		start: tokenStart
+		cause: theCause
+		location: location
+]
+
+{ #category : #'private-scanning' }
+TPRBScanner >> scanIdentifierOrKeyword [
+	| name |
+	self scanName.
+	(currentCharacter = $: and: [stream peek ~= $=]) 
+		ifTrue: [^self scanKeyword].
+	name := buffer contents.
+	name = 'true' 
+		ifTrue: 
+			[^TPRBLiteralToken 
+				value: true
+				start: tokenStart
+				stop: self previousStepPosition].
+	name = 'false' 
+		ifTrue: 
+			[^TPRBLiteralToken 
+				value: false
+				start: tokenStart
+				stop: self previousStepPosition].
+	name = 'nil' 
+		ifTrue: 
+			[^TPRBLiteralToken 
+				value: nil
+				start: tokenStart
+				stop: self previousStepPosition].
+	^TPRBIdentifierToken value: name start: tokenStart
+]
+
+{ #category : #'private-scanning' }
+TPRBScanner >> scanKeyword [
+	| outputPosition inputPosition name |
+	[currentCharacter = $:] whileTrue: 
+			[buffer nextPut: currentCharacter.
+			outputPosition := buffer position.
+			inputPosition := stream position.
+			self step.	":"
+			[characterType = #alphabetic] whileTrue: [self scanName]].
+	buffer position: outputPosition.
+	stream position: inputPosition.
+	self step.
+	name := buffer contents.
+	^(name occurrencesOf: $:) == 1 
+		ifTrue: [TPRBKeywordToken value: name start: tokenStart]
+		ifFalse: 
+			[TPRBMultiKeywordLiteralToken 
+				value: name asSymbol
+				start: tokenStart
+				stop: tokenStart + name size - 1]
+]
+
+{ #category : #'private-scanning' }
+TPRBScanner >> scanLiteral [
+	"Do not allow whitespace between # and the literal."
+
+	"Do not allow number literals after the #"
+
+	self step.
+	characterType = #alphabetic
+		ifTrue: [ ^ self scanSymbol ].
+	characterType = #binary
+		ifTrue:
+			[ ^ (self scanBinary: TPRBLiteralToken)
+				stop: self previousStepPosition ].
+	currentCharacter = $'
+		ifTrue: [ ^ self scanStringSymbol ].
+	(currentCharacter = $( or: [ currentCharacter = $[ ])
+		ifTrue: [ ^ self scanLiteralArrayToken ].
+	"Accept multiple #."
+	currentCharacter = $#
+		ifTrue: [ ^ self scanLiteral ].
+	^ self scanError: 'Expecting a literal type'
+]
+
+{ #category : #'private-scanning' }
+TPRBScanner >> scanLiteralArrayToken [
+	| token |
+	token := TPRBLiteralArrayToken 
+				value: (String with: $# with: currentCharacter)
+				start: tokenStart.
+	self step.
+	^token
+]
+
+{ #category : #'private-scanning' }
+TPRBScanner >> scanLiteralCharacter [
+	| token |
+	self step.	"$"
+	currentCharacter ifNil:[ ^ self scanError:'A Character was expected'].
+	token := TPRBLiteralToken 
+				value: currentCharacter
+				start: tokenStart
+				stop: stream position.
+	self step.	"char"
+	^token
+]
+
+{ #category : #'private-scanning' }
+TPRBScanner >> scanLiteralString [
+	| string |
+	[stream atEnd ifTrue: [
+		self step. "to handle eof"
+		^ self scanError: 'Unmatched '' in string literal.'].
+	string := stream upTo: $'. 
+	stream peekBack = $' ifFalse: [ 
+		"the peek logic here is because #upTo: does not tell if given char was found"
+		buffer nextPutAll: string.
+		self step. "to handle eof"
+		^ self scanError: 'Unmatched '' in string literal.'].
+	
+	self step = $'] whileTrue: [ 
+		buffer nextPutAll: string; nextPut: $'.
+		string := ''].
+	
+	buffer position = 0 ifFalse: [ 		
+		buffer nextPutAll: string.
+		string := buffer contents].	
+	
+	"It's possible to use a plain Text for parsing.
+	In that case string here could be a Text instance but literal value must be a String"	
+	^TPRBLiteralToken 
+		value: string asString 
+		start: tokenStart 
+		stop: self previousStepPosition
+]
+
+{ #category : #'private-scanning' }
+TPRBScanner >> scanName [
+	[characterType = #alphabetic or: [characterType = #digit]] whileTrue: 
+			[buffer nextPut: currentCharacter.
+			self step]
+]
+
+{ #category : #'private-scanning' }
+TPRBScanner >> scanNumber [
+	| start number stop string |
+	start := stream position.
+	stream position: start - 1.
+	number := [NumberParser parse: stream] on: Error do: [:err | self scannerError: err messageText].
+	stop := stream position.
+	stream position: start - 1.
+	string := stream next: stop - start + 1.
+	stream position: stop.
+	self step.
+	^TPRBNumberLiteralToken 
+		value: number
+		start: start
+		stop: stop
+		source: string
+]
+
+{ #category : #'private-scanning' }
+TPRBScanner >> scanSpecialCharacter [
+	| character |
+	currentCharacter = $: 
+		ifTrue: [
+			self step.
+			^ currentCharacter = $= 
+				ifTrue: [
+					self step.
+					TPRBAssignmentToken start: tokenStart]
+				ifFalse: [ TPRBSpecialCharacterToken value: $: start: tokenStart ]].
+			
+	currentCharacter = $_ ifTrue: [ 
+		self step.  
+		^ TPRBShortAssignmentToken start: tokenStart ].
+	
+	character := currentCharacter.
+	self step.
+	^ TPRBSpecialCharacterToken value: character start: tokenStart
+]
+
+{ #category : #'private-scanning' }
+TPRBScanner >> scanStringSymbol [
+	| literalToken |
+	literalToken := self scanLiteralString.
+	literalToken value: literalToken value asSymbol.
+	^literalToken
+]
+
+{ #category : #'private-scanning' }
+TPRBScanner >> scanSymbol [
+	[ characterType = #alphabetic or: [ currentCharacter = $: ] ] whileTrue: [
+		self scanName.
+		currentCharacter = $: ifTrue: [
+			buffer nextPut: $:.
+			self step ] ].
+	^ TPRBLiteralToken 
+		value: buffer contents asSymbol
+		start: tokenStart
+		stop: self previousStepPosition
+]
+
+{ #category : #accessing }
+TPRBScanner >> scanToken [
+	"fast-n-ugly. Don't write stuff like this. Has been found to cause cancer in laboratory rats. Basically a 
+	case statement. Didn't use Dictionary because lookup is pretty slow."
+
+	characterType = #alphabetic ifTrue: [^self scanIdentifierOrKeyword].
+	(characterType = #digit 
+		or: [currentCharacter = $- and: [(self classify: stream peek) = #digit]]) 
+			ifTrue: [^self scanNumber].
+	characterType = #binary ifTrue: [^self scanBinary: TPRBBinarySelectorToken].
+	characterType = #special ifTrue: [^self scanSpecialCharacter].
+	currentCharacter = $' ifTrue: [^self scanLiteralString].
+	currentCharacter = $# ifTrue: [^self scanLiteral].
+	currentCharacter = $$ ifTrue: [^self scanLiteralCharacter].
+	^self scanUnknownCharacter
+]
+
+{ #category : #'private-scanning' }
+TPRBScanner >> scanUnknownCharacter [
+	| errorToken |
+	errorToken := self scanError: 'Unknown character'.
+	"advance"
+	self step.
+	^ errorToken
+]
+
+{ #category : #'error handling' }
+TPRBScanner >> scannerError: aString [
+	(self errorBlock cull: aString cull: self errorPosition cull: self) ifNil: [ 
+		^ SyntaxErrorNotification
+					inClass: Object
+					withCode: stream contents
+					doitFlag: false
+					errorMessage: aString
+					location: stream position + 1
+	]
+]
+
+{ #category : #private }
+TPRBScanner >> step [
+	stream atEnd 
+		ifTrue: 
+			[characterType := #eof.
+			^currentCharacter := nil].
+	currentCharacter := stream next.
+	characterType := self classify: currentCharacter.
+	^currentCharacter
+]
+
+{ #category : #'private-scanning' }
+TPRBScanner >> stripComment [
+	| start stop |
+	start := stream position.
+	self step.
+	characterType = #eof
+		ifTrue: [ ^ self scannerError: 'Unmatched " in comment.' ].
+	[ currentCharacter = $" and: [ self step ~= $" ] ]
+		whileFalse: [ characterType = #eof
+				ifTrue: [ ^ self scannerError: 'Unmatched " in comment.' ].
+			self step ].
+	stop := characterType = #eof
+		ifTrue: [ stream position ]
+		ifFalse: [ stream position - 1 ].
+	comments add: (start to: stop)
+]
+
+{ #category : #'private-scanning' }
+TPRBScanner >> stripSeparators [
+	
+	[[characterType = #separator] whileTrue: [self step].
+	currentCharacter = $"] 
+			whileTrue: [self stripComment]
+]
