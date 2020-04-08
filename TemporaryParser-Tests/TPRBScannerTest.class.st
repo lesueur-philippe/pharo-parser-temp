@@ -18,6 +18,11 @@ TPRBScannerTest >> scannerClass [
 ]
 
 { #category : #tests }
+TPRBScannerTest >> testBla [
+	"nothing" 
+]
+
+{ #category : #tests }
 TPRBScannerTest >> testNextLiteralCharacterWithAMissingCharacter [
 	| source scanner scannedToken |
 	source := '$'.
