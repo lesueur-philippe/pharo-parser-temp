@@ -265,15 +265,6 @@ TPRBParserTest >> testEquivalentExceptRenaming [
 				identicalTo: each last ]
 ]
 
-{ #category : #tests }
-TPRBParserTest >> testFormatter [
-	self exampleClasses do: [ :class |
-		class selectors do: [ :selector | 
-		self 
-			compare: (class parseTreeFor: selector)
-			to: (self parserClass parseMethod: (class parseTreeFor: selector) printString) ] ]
-]
-
 { #category : #'tests interval' }
 TPRBParserTest >> testIntervals [
 	| tree |
@@ -859,23 +850,6 @@ TPRBParserTest >> testQueryingPrimitiveErrorVar [
 	self assert: (tree blockNodes first body whoDefines: 'nothing') equals: tree blockNodes first body.
 	self assert: (tree body whoDefines: 'ec') equals: tree.
 
-]
-
-{ #category : #tests }
-TPRBParserTest >> testReplacingNodes [
-	| tree search block |
-	tree := self parserClass parseMethod: '+ a | a b | self ifTrue: [a] ifFalse: [b := c]. a := b. [:b :c :a | a foo: a; foo1: a; foo2: a foo: b]. {a. b}. ^a'.
-	search := self parseTreeSearcher.
-	block := [ :aNode :answer | aNode replaceWith: (TPRBVariableNode named: 'q') ].
-	search
-		matches: 'a' do: block;
-		matchesArgument: 'a' do: block.
-	search executeTree: tree.
-	self
-		assert: tree
-		equals:
-			(self parserClass parseMethod: '+ q | q b | self ifTrue: [q] ifFalse: [b := c]. q := b. [:b :c :q | q foo: q; foo1: q; foo2: q foo: b]. {q. b}. ^q').
-	self assert: tree removeDeadCode equals: (self parserClass parseMethod: '+ q | q b | self ifTrue: [] ifFalse: [b := c]. q := b. {q. b}. ^q')
 ]
 
 { #category : #'tests parsing' }

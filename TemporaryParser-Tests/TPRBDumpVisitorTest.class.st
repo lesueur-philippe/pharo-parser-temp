@@ -83,56 +83,12 @@ TPRBDumpVisitorTest >> testCascadeNodeDump [
 ]
 
 { #category : #tests }
-TPRBDumpVisitorTest >> testDumpOnObjectMethod [
-	| node dumpedNode |
-	node := (Object>>#readSlot:) ast.
-	dumpedNode := Smalltalk compiler evaluate: node dump.
-	
-	self assert: dumpedNode class equals: TPRBMethodNode. 
-	self assert: node class equals: dumpedNode class.
-	self assert: node printString equals: dumpedNode printString.
-	
-	
-	
-]
-
-{ #category : #tests }
-TPRBDumpVisitorTest >> testDumpOnSelfClassMethods [
-	| methods node dumpedNode |
-	methods := {(self class >> #testAssignmentNodeDump).
-	(self class >> #uselessMethod).
-	(self class >> #testVariableNodeDump).
-	(self class >> #testThisContextNodeDump).
-	(self class >> #testReturnNodeDump)}.
-	methods
-		do: [ :each | 
-			node := each ast.
-			dumpedNode := Smalltalk compiler evaluate: node dump.
-			self assert: dumpedNode class equals: TPRBMethodNode.
-			self assert: node class equals: dumpedNode class.
-			self assert: node formattedCode equals: dumpedNode printString ]
-]
-
-{ #category : #tests }
 TPRBDumpVisitorTest >> testErrorNodeDump [
 	| node dumpedNode |
 	node := self parseFaultyExpression: '( +'.
 	dumpedNode := Smalltalk compiler evaluate: node dump.
 	
 	self assert: dumpedNode class equals: TPRBParseErrorNode. 
-	self assert: node class equals: dumpedNode class.
-	self assert: node printString equals: dumpedNode printString.
-	
-]
-
-{ #category : #tests }
-TPRBDumpVisitorTest >> testGlobalNodeDump [
-	| node dumpedNode |
-	"Global nodes are only generated when a semantic analysis is triggered on a method"
-	node := self parseMethod: 'foo ^ Object'.
-	dumpedNode := Smalltalk compiler evaluate: node doSemanticAnalysis dump.
-	
-	self assert: dumpedNode statements first value class equals: TPRBGlobalNode. 
 	self assert: node class equals: dumpedNode class.
 	self assert: node printString equals: dumpedNode printString.
 	
