@@ -265,23 +265,6 @@ TPRBParserTest >> testEquivalentExceptRenaming [
 				identicalTo: each last ]
 ]
 
-{ #category : #'tests interval' }
-TPRBParserTest >> testIntervals [
-	| tree |
-	tree := self treeWithReallyEverything.
-	tree nodesDo: 
-			[:each | 
-			(each parent isNil or: [each parent isCascade not and: [ each parent isLiteralNode not]]) 
-				ifTrue: 
-					[| newNode source |
-					source := tree source copyFrom: each start to: each stop.
-					each isPragma ifFalse: [
-						newNode := each isMethod 
-								ifTrue: [self parserClass parseMethod: source]
-								ifFalse: [self parserClass parseExpression: source].
-						self compare: each to: newNode]]]
-]
-
 { #category : #'tests parsing' }
 TPRBParserTest >> testInvalidPragmaPosition [
 	#(
@@ -476,21 +459,6 @@ TPRBParserTest >> testParseFaultyMethodMessagePattern [
 	faultyMessagePattern := '1'.
 	node := self parseFaultyMethod: faultyMessagePattern.
 	self assert: node isFaulty
-]
-
-{ #category : #'tests parsing faulty' }
-TPRBParserTest >> testParseFaultyMethodStop [
-	 | methodSource node |
-	
-	methodSource :=  'method: asd   self do      ('.
-	node := self parseFaultyMethod: methodSource.
-	
-	self assert: node isMethod.
-	self assert: node isFaulty.
-	self assert: node stop equals: 28.
-
-
-	
 ]
 
 { #category : #'tests parsing faulty' }
