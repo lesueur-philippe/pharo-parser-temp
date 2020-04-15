@@ -265,32 +265,6 @@ TPRBParserTest >> testEquivalentExceptRenaming [
 				identicalTo: each last ]
 ]
 
-{ #category : #tests }
-TPRBParserTest >> testFormatter [
-	self exampleClasses do: [ :class |
-		class selectors do: [ :selector | 
-		self 
-			compare: (class parseTreeFor: selector)
-			to: (self parserClass parseMethod: (class parseTreeFor: selector) printString) ] ]
-]
-
-{ #category : #'tests interval' }
-TPRBParserTest >> testIntervals [
-	| tree |
-	tree := self treeWithReallyEverything.
-	tree nodesDo: 
-			[:each | 
-			(each parent isNil or: [each parent isCascade not and: [ each parent isLiteralNode not]]) 
-				ifTrue: 
-					[| newNode source |
-					source := tree source copyFrom: each start to: each stop.
-					each isPragma ifFalse: [
-						newNode := each isMethod 
-								ifTrue: [self parserClass parseMethod: source]
-								ifFalse: [self parserClass parseExpression: source].
-						self compare: each to: newNode]]]
-]
-
 { #category : #'tests parsing' }
 TPRBParserTest >> testInvalidPragmaPosition [
 	#(
@@ -352,41 +326,6 @@ TPRBParserTest >> testMatchInContext [
 TPRBParserTest >> testMethodPatterns [
 	#(#('+ a ^self + a' #+) #('foo ^self foo' #foo) #('foo: a bar: b ^a + b' #foo:bar:))
 		do: [ :each | self assert: (self parserClass parseMethodPattern: each first) identicalTo: each last ]
-]
-
-{ #category : #tests }
-TPRBParserTest >> testModifying [
-	| tree |
-	tree := self parserClass parseMethod: 'foo: a bar: b | c | self first. self second. a + b + c'.
-	self deny: tree lastIsReturn.
-	self deny: (tree body statements at: 2) isUsed.
-	self assert: tree body statements last arguments first isUsed.
-	self assert: (tree isLast: tree body statements last).
-	self deny: (tree isLast: tree body statements first).
-	self assert: (tree defines: 'a').
-	self deny: (tree defines: 'c').
-	self assert: (tree body defines: 'c').
-	self deny: (tree body defines: 'a').
-	tree
-		addReturn;
-		selector: #bar:foo:.
-	tree body
-		addTemporaryNamed: 'd';
-		removeTemporaryNamed: 'c'.
-	self compare: tree to: (self parserClass parseMethod: 'bar: a foo: b | d | self first. self second. ^a + b + c').
-	self
-		assertEmpty:
-			(tree argumentNames asSet
-				removeAll: #('a' 'b');
-				yourself).
-	self
-		assertEmpty:
-			(tree allDefinedVariables asSet
-				removeAll: #('a' 'b' 'd');
-				yourself).
-	tree := self parserClass parseExpression: 'self foo: 0'.
-	tree selector: #+.
-	self compare: tree to: (self parserClass parseExpression: 'self + 0')
 ]
 
 { #category : #'tests parsing' }
@@ -520,21 +459,6 @@ TPRBParserTest >> testParseFaultyMethodMessagePattern [
 	faultyMessagePattern := '1'.
 	node := self parseFaultyMethod: faultyMessagePattern.
 	self assert: node isFaulty
-]
-
-{ #category : #'tests parsing faulty' }
-TPRBParserTest >> testParseFaultyMethodStop [
-	 | methodSource node |
-	
-	methodSource :=  'method: asd   self do      ('.
-	node := self parseFaultyMethod: methodSource.
-	
-	self assert: node isMethod.
-	self assert: node isFaulty.
-	self assert: node stop equals: 28.
-
-
-	
 ]
 
 { #category : #'tests parsing faulty' }
@@ -859,23 +783,6 @@ TPRBParserTest >> testQueryingPrimitiveErrorVar [
 	self assert: (tree blockNodes first body whoDefines: 'nothing') equals: tree blockNodes first body.
 	self assert: (tree body whoDefines: 'ec') equals: tree.
 
-]
-
-{ #category : #tests }
-TPRBParserTest >> testReplacingNodes [
-	| tree search block |
-	tree := self parserClass parseMethod: '+ a | a b | self ifTrue: [a] ifFalse: [b := c]. a := b. [:b :c :a | a foo: a; foo1: a; foo2: a foo: b]. {a. b}. ^a'.
-	search := self parseTreeSearcher.
-	block := [ :aNode :answer | aNode replaceWith: (TPRBVariableNode named: 'q') ].
-	search
-		matches: 'a' do: block;
-		matchesArgument: 'a' do: block.
-	search executeTree: tree.
-	self
-		assert: tree
-		equals:
-			(self parserClass parseMethod: '+ q | q b | self ifTrue: [q] ifFalse: [b := c]. q := b. [:b :c :q | q foo: q; foo1: q; foo2: q foo: b]. {q. b}. ^q').
-	self assert: tree removeDeadCode equals: (self parserClass parseMethod: '+ q | q b | self ifTrue: [] ifFalse: [b := c]. q := b. {q. b}. ^q')
 ]
 
 { #category : #'tests parsing' }

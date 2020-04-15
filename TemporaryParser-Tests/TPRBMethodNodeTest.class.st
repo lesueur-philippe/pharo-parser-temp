@@ -18,20 +18,6 @@ TPRBMethodNodeTest >> parseMethod: aString [
 ]
 
 { #category : #tests }
-TPRBMethodNodeTest >> testAddingMethodProperties [
-
-	| ast |
-	ast := self parseMethod: 'one ^ self'.
-	self assert: ast methodProperties isNil. 
-	
-	ast methodPropertyAt: #testKey put: #testValue.
-	ast methodPropertyAt: #testKey2 put: #testValue2.
-	self assert: (ast methodPropertyAt: #testKey) equals: #testValue.
-	self assert: (ast methodPropertyAt: #testKey2) equals: #testValue2.
-	self assert: ast methodProperties class equals: AdditionalMethodState
-]
-
-{ #category : #tests }
 TPRBMethodNodeTest >> testCachingMethodArguments [
 
 	| ast |
