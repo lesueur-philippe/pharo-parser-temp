@@ -158,7 +158,7 @@ TPRBParser >> assignmentNodeClass [
 
 { #category : #testing }
 TPRBParser >> atEnd [
-	^currentToken class == TPRBToken
+	^currentToken class == TPRBEOFToken
 ]
 
 { #category : #'private-parsing' }

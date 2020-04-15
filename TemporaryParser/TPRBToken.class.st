@@ -45,6 +45,11 @@ TPRBToken >> isBinary [
 ]
 
 { #category : #testing }
+TPRBToken >> isEOF [
+	^false
+]
+
+{ #category : #testing }
 TPRBToken >> isError [
 	^false
 ]

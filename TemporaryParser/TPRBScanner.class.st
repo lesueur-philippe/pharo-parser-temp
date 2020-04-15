@@ -288,7 +288,7 @@ TPRBScanner >> next [
 	tokenStart := stream position.
 	token := characterType = #eof 
 				ifTrue: 
-					[TPRBToken start: tokenStart + 1	"The EOF token should occur after the end of input"]
+					[TPRBEOFToken start: tokenStart + 1	"The EOF token should occur after the end of input"]
 				ifFalse: [self scanToken].
 	self stripSeparators.
 	token comments: self getComments.
@@ -327,14 +327,13 @@ TPRBScanner >> previousStepPosition [
 ]
 
 { #category : #'private-scanning' }
-TPRBScanner >> scanAnySymbol [
-	characterType = #alphabetic ifTrue: [^self scanSymbol].
-	characterType = #binary ifTrue: [^self scanBinary: TPRBLiteralToken].
-	^TPRBToken new
-]
-
-{ #category : #'private-scanning' }
 TPRBScanner >> scanBinary: aClass [ 
+	"This method isn't supposed to be used in a public context as it accepts any kind of RBValueToken.
+	 The only 2 tokens supposed to be used are RBLiteralToken and RBBinarySelectorToken."
+	
+	"This method trims separators but doesn't add comments to the token created."
+	
+	"Puts any succession of selectors in the token, even meaningless ones."
 	| val |
 	buffer nextPut: currentCharacter.
 	self step.
@@ -344,6 +343,11 @@ TPRBScanner >> scanBinary: aClass [
 	val := buffer contents.
 	val := val asSymbol.
 	^aClass value: val start: tokenStart
+]
+
+{ #category : #'private-scanning' }
+TPRBScanner >> scanBinarySelector [
+	^self scanBinary: TPRBBinarySelectorToken
 ]
 
 { #category : #'private-scanning' }
@@ -423,7 +427,7 @@ TPRBScanner >> scanLiteral [
 		ifTrue: [ ^ self scanSymbol ].
 	characterType = #binary
 		ifTrue:
-			[ ^ (self scanBinary: TPRBLiteralToken)
+			[ ^ (self scanLiteralBinary)
 				stop: self previousStepPosition ].
 	currentCharacter = $'
 		ifTrue: [ ^ self scanStringSymbol ].
@@ -443,6 +447,11 @@ TPRBScanner >> scanLiteralArrayToken [
 				start: tokenStart.
 	self step.
 	^token
+]
+
+{ #category : #'private-scanning' }
+TPRBScanner >> scanLiteralBinary [
+	^self scanBinary: TPRBLiteralToken
 ]
 
 { #category : #'private-scanning' }
@@ -523,10 +532,6 @@ TPRBScanner >> scanSpecialCharacter [
 					self step.
 					TPRBAssignmentToken start: tokenStart]
 				ifFalse: [ TPRBSpecialCharacterToken value: $: start: tokenStart ]].
-			
-	currentCharacter = $_ ifTrue: [ 
-		self step.  
-		^ TPRBShortAssignmentToken start: tokenStart ].
 	
 	character := currentCharacter.
 	self step.
@@ -563,7 +568,7 @@ TPRBScanner >> scanToken [
 	(characterType = #digit 
 		or: [currentCharacter = $- and: [(self classify: stream peek) = #digit]]) 
 			ifTrue: [^self scanNumber].
-	characterType = #binary ifTrue: [^self scanBinary: TPRBBinarySelectorToken].
+	characterType = #binary ifTrue: [^self scanBinarySelector].
 	characterType = #special ifTrue: [^self scanSpecialCharacter].
 	currentCharacter = $' ifTrue: [^self scanLiteralString].
 	currentCharacter = $# ifTrue: [^self scanLiteral].
