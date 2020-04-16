@@ -136,6 +136,11 @@ TPRBProgramNode >> asReturn [
 	^parent addReturn
 ]
 
+{ #category : #converting }
+TPRBProgramNode >> asSequenceNode [
+	^RBSequenceNode statements: {self} 
+]
+
 { #category : #querying }
 TPRBProgramNode >> assignmentNodes [
 	^self allChildren select: [:each | each isAssignment].
