@@ -74,15 +74,6 @@ TPRBScannerTest >> testNextAcceptRadixNumbers [
 	self assert: token isNumberLiteralToken.
 ]
 
-{ #category : #testSeparators }
-TPRBScannerTest >> testNextAddsCommentToComments [
-	| scanner token |
-	scanner := self buildScannerForText: '"start comment"firstToken'.
-	token := scanner next.
-	self assert: token comments equals: (OrderedCollection newFrom: {(1 to: 15)}) .
-	
-]
-
 { #category : #testKeyword }
 TPRBScannerTest >> testNextAllAlphabeticEndingWithColonGiveKeyword [
 	| scanner token |
@@ -163,7 +154,7 @@ firstToken'.
 { #category : #testSeparators }
 TPRBScannerTest >> testNextDoesNotAddSpacesToComments [
 	| scanner token |
-	scanner := self buildScannerForText: '   firstToken'.
+	scanner := self buildScannerForText: String space, String space,'firstToken'.
 	token := scanner next.
 	self assert: token comments isNil.
 	
@@ -172,7 +163,7 @@ TPRBScannerTest >> testNextDoesNotAddSpacesToComments [
 { #category : #testSeparators }
 TPRBScannerTest >> testNextDoesNotAddTabToComments [
 	| scanner token |
-	scanner := self buildScannerForText: '	firstToken'.
+	scanner := self buildScannerForText: String tab, 'firstToken'.
 	token := scanner next.
 	self assert: token comments isNil.
 	
@@ -184,6 +175,38 @@ TPRBScannerTest >> testNextDollarSignCanNotStandAlone [
 	scanner := self buildScannerForText: '$'.
 	token := scanner next.
 	self assert: token isError.
+	self assert: token value equals: ''.
+	self assert: token cause equals: 'A Character was expected'.
+]
+
+{ #category : #testSeparators }
+TPRBScannerTest >> testNextEOFContainsCommentsWhenNoOtherToken [
+	| scanner token |
+	scanner := self buildScannerForText: '"start comment"'.
+	
+	token := scanner next.
+	self assert: token isEOF.
+	self assert: token comments equals:(OrderedCollection newFrom: {(1 to: 15)}).
+	self assert: token start equals: 16.
+]
+
+{ #category : #testSeparators }
+TPRBScannerTest >> testNextFirstTokenContainsFollowingComments [ 
+	| scanner token |
+	scanner := self buildScannerForText: 'firstToken "following comment"'.
+	
+	"The first token 'firstToken' takes the previous comment and the following one"
+	token := scanner next.
+	self assert: token comments equals: (OrderedCollection newFrom: {(12 to: 30)}).
+]
+
+{ #category : #testSeparators }
+TPRBScannerTest >> testNextFirstTokenContainsPrecedingComments [
+	| scanner token |
+	scanner := self buildScannerForText: '"start comment"firstToken'.
+	token := scanner next.
+	self assert: token comments equals: (OrderedCollection newFrom: {(1 to: 15)}) .
+	
 ]
 
 { #category : #testNumberLiteral }
@@ -225,41 +248,6 @@ TPRBScannerTest >> testNextFloatNumbersHasFloatValue [
 	scanner := self buildScannerForText: '3.2'.
 	token := scanner next.
 	self assert: token value equals: 3.2.
-]
-
-{ #category : #testSeparators }
-TPRBScannerTest >> testNextGeneralSeparatorsHandling [
-	| scanner token |
-	scanner := self buildScannerForText: 
-	'  "star comment" firstToken 
-   "inbetween comment" secondToken
-	"second inbetween" "multiple comments"
-   : "spaces and comments in affectation" =          
-   "end comment"'.
-	"Expecting all spaces and line breaks to be trimmed."
-	
-	"The first token 'firstToken' takes the previous comment and the following one"
-	token := scanner next.
-	self assert: token comments equals: (OrderedCollection newFrom: {(3 to: 16). (33 to: 51)}).
-	self assert: token start equals: 18.
-	
-	"The next token 'secondToken' takes the following 2 comments."
-	token := scanner next.
-	self assert: token comments equals: (OrderedCollection newFrom: {(66 to: 83). (85 to: 103)}).
-	self assert: token start equals: 53.
-	
-	"Separated by comments multiple symbol tokens don't create the one expacted token."
-	token := scanner next.
-	self assert: token comments equals: (OrderedCollection newFrom: {(110 to: 145)}).
-	self assert: token start equals: 108.
-	
-	token := scanner next.
-	self assert: token comments equals: (OrderedCollection newFrom: {(162 to: 174)}).
-	self assert: token start equals: 147.
-	
-	token := scanner next.
-	self assert: token comments isNil.
-	self assert: token start equals: 175.
 ]
 
 { #category : #testError }
@@ -540,6 +528,7 @@ TPRBScannerTest >> testNextLiteralBeginningWithDigitThrowsError [
 	token := scanner next.
 	self assert: token isError.
 	self assert: token value equals: '1'.
+	self assert: token cause equals: 'Expecting a literal type'.
 ]
 
 { #category : #testLiteral }
@@ -755,18 +744,27 @@ TPRBScannerTest >> testNextRadixNumbersCanBeNegative [
 	self assert: token value equals: -10.
 ]
 
+{ #category : #testSeparators }
+TPRBScannerTest >> testNextSecondTokenDoesNotConsumePrecedingComment [
+	| scanner token |
+	scanner := self buildScannerForText: 
+	'firstToken 
+   "inbetween comment" secondToken
+	"second inbetween" "multiple comments"'.
+	"Expecting all spaces and line breaks to be trimmed."
+	
+	"The first token 'firstToken' takes the previous comment and the following one"
+	token := scanner next.
+	"The next token 'secondToken' takes the following 2 comments."
+	token := scanner next.
+	self assert: token comments equals: (OrderedCollection newFrom: {(49 to: 66). (68 to: 86)}).
+	self assert: token start equals: 36.
+]
+
 { #category : #testSpecialCharacters }
 TPRBScannerTest >> testNextSpecialCharactereCanBeAssignement [
 	| scanner token |
 	scanner := self buildScannerForText: ':='.
-	token := scanner next.
-	self assert: token isAssignment.
-]
-
-{ #category : #testSpecialCharacters }
-TPRBScannerTest >> testNextSpecialCharactereCanBeShortAssignement [
-	| scanner token |
-	scanner := self buildScannerForText: '_'.
 	token := scanner next.
 	self assert: token isAssignment.
 ]
@@ -865,10 +863,10 @@ firstToken'.
 TPRBScannerTest >> testNextTokenStartAfterSpaces [
 	"Tests that the next token adapts starting point according to it."
 	| scanner token |
-	scanner := self buildScannerForText: '   firstToken'.
+	scanner := self buildScannerForText: String space, String space, 'firstToken'.
 	token := scanner next.
 	self assert: token value equals: 'firstToken'.
-	self assert: token start equals: 4.
+	self assert: token start equals: 3.
 	
 ]
 
@@ -876,7 +874,7 @@ TPRBScannerTest >> testNextTokenStartAfterSpaces [
 TPRBScannerTest >> testNextTokenStartAfterTab [
 	"Tests that the next token adapts starting point according to it."
 	| scanner token |
-	scanner := self buildScannerForText: '	firstToken'.
+	scanner := self buildScannerForText: String tab, 'firstToken'.
 	token := scanner next.
 	self assert: token value equals: 'firstToken'.
 	self assert: token start equals: 2.
@@ -905,7 +903,7 @@ firstToken'.
 { #category : #testSeparators }
 TPRBScannerTest >> testNextTrimsBeginningSpaces [
 	| scanner token |
-	scanner := self buildScannerForText: '   firstToken'.
+	scanner := self buildScannerForText: String space, String space, 'firstToken'.
 	token := scanner next.
 	self assert: token value equals: 'firstToken'.
 	
@@ -914,7 +912,7 @@ TPRBScannerTest >> testNextTrimsBeginningSpaces [
 { #category : #testSeparators }
 TPRBScannerTest >> testNextTrimsBeginningTab [
 	| scanner token |
-	scanner := self buildScannerForText: '	firstToken'.
+	scanner := self buildScannerForText: String tab, 'firstToken'.
 	token := scanner next.
 	self assert: token value equals: 'firstToken'.
 	
@@ -946,23 +944,22 @@ TPRBScannerTest >> testNextTrimsEndLineBreak [
 { #category : #testSeparators }
 TPRBScannerTest >> testNextTrimsEndSpaces [
 	| scanner token |
-	scanner := self buildScannerForText: 'firstToken    '.
+	scanner := self buildScannerForText: 'firstToken', String space, String space.
 	scanner next.
 	token := scanner next.
 	self assert: token isEOF.
-	self assert: token start equals: 15.
+	self assert: token start equals: 13.
 	
 ]
 
 { #category : #testSeparators }
 TPRBScannerTest >> testNextTrimsEndTab [
 	| scanner token |
-	"There are 2 spaces before tab."
-	scanner := self buildScannerForText: 'firstToken  	'.
+	scanner := self buildScannerForText: 'firstToken', String tab.
 	scanner next.
 	token := scanner next.
 	self assert: token isEOF.
-	self assert: token start equals: 14.
+	self assert: token start equals: 12.
 	
 ]
 
@@ -992,23 +989,22 @@ secondToken'.
 { #category : #testSeparators }
 TPRBScannerTest >> testNextTrimsMiddleSpaces [
 	| scanner token |
-	scanner := self buildScannerForText: 'firstToken    secondToken'.
+	scanner := self buildScannerForText: 'firstToken',String space, String space,'secondToken'.
 	scanner next.
 	token := scanner next.
 	self assert: token isIdentifier.
-	self assert: token start equals: 15.
+	self assert: token start equals: 13.
 	
 ]
 
 { #category : #testSeparators }
 TPRBScannerTest >> testNextTrimsMiddleTab [
 	| scanner token |
-	"There are 2 spaces before tab."
-	scanner := self buildScannerForText: 'firstToken  	secondToken'.
+	scanner := self buildScannerForText: 'firstToken', String tab, 'secondToken'.
 	scanner next.
 	token := scanner next.
 	self assert: token isIdentifier.
-	self assert: token start equals: 14.
+	self assert: token start equals: 12.
 	
 ]
 
