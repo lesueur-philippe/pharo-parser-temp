@@ -347,11 +347,15 @@ TPRBScanner >> scanBinary: aClass [
 
 { #category : #'private-scanning' }
 TPRBScanner >> scanBinarySelector [
+	"Used when binary characters are encountered and not beginning with #"
 	^self scanBinary: TPRBBinarySelectorToken
 ]
 
 { #category : #'private-scanning' }
 TPRBScanner >> scanError: theCause [
+	"An error token accepts every character given, recognised or not."
+	"The value of an error token is one character maximum : the current character."
+	"Prefixes like # and $ don't appear."
 	| location |
 	"error location is the next not parseable character. Or current stream position + 1 if 
 	an expected character is missing."
@@ -368,6 +372,10 @@ TPRBScanner >> scanError: theCause [
 
 { #category : #'private-scanning' }
 TPRBScanner >> scanIdentifierOrKeyword [
+	"This scan accepts keywords only containing a colon."
+	"The presence of a colon will mark the creation of a keyword, except when followed with =.
+	 Otherwise an Identifier is created."
+	"To ensure the pertinence of this scanner, it must be called only if the current character is 	, 	 	 alphabetic."
 	| name |
 	self scanName.
 	(currentCharacter = $: and: [stream peek ~= $=]) 
@@ -396,6 +404,11 @@ TPRBScanner >> scanIdentifierOrKeyword [
 
 { #category : #'private-scanning' }
 TPRBScanner >> scanKeyword [
+	"This scan can actually give odd keywords like a single colon.
+	 : is a keyword but it is an impossible one to reach with a call to next.
+	 However, a call to next can give an RBMultiKeywordLiteralToken even if the string scanned is like
+	 the following : 'keyword:::::::'. Here, each colon is considered a keyword."
+	"Of course, a keyword must finish with a colon. That's why arguments are not taken into account."
 	| outputPosition inputPosition name |
 	[currentCharacter = $:] whileTrue: 
 			[buffer nextPut: currentCharacter.
@@ -422,6 +435,7 @@ TPRBScanner >> scanLiteral [
 
 	"Do not allow number literals after the #"
 
+	"This scan accepts keywords as well as binaries and Identifiers."
 	self step.
 	characterType = #alphabetic
 		ifTrue: [ ^ self scanSymbol ].
@@ -441,6 +455,7 @@ TPRBScanner >> scanLiteral [
 
 { #category : #'private-scanning' }
 TPRBScanner >> scanLiteralArrayToken [
+	"This scan accepts any character but is only meant to be used when a # is followed by ( or [ ."
 	| token |
 	token := TPRBLiteralArrayToken 
 				value: (String with: $# with: currentCharacter)
@@ -451,11 +466,15 @@ TPRBScanner >> scanLiteralArrayToken [
 
 { #category : #'private-scanning' }
 TPRBScanner >> scanLiteralBinary [
+	"Used when binary characters are encountered and beginning with #"
 	^self scanBinary: TPRBLiteralToken
 ]
 
 { #category : #'private-scanning' }
 TPRBScanner >> scanLiteralCharacter [
+	"Accepts any character."
+	"This scan must only be used after the encounter of a $."
+	"'$$' is a correct string to be scanned and the second $ mustn't trigger a new scan."
 	| token |
 	self step.	"$"
 	currentCharacter ifNil:[ ^ self scanError:'A Character was expected'].
@@ -469,6 +488,7 @@ TPRBScanner >> scanLiteralCharacter [
 
 { #category : #'private-scanning' }
 TPRBScanner >> scanLiteralString [
+	"String can contain anything, even faulty code."
 	| string |
 	[stream atEnd ifTrue: [
 		self step. "to handle eof"
@@ -523,6 +543,9 @@ TPRBScanner >> scanNumber [
 
 { #category : #'private-scanning' }
 TPRBScanner >> scanSpecialCharacter [
+	"Every given character gives a RBSpecialCharacterToken with only one character as value except for
+	 : followed by = which gives an assignement."
+	"The case of the assignement is the only one consuming more than 1 character."
 	| character |
 	currentCharacter = $: 
 		ifTrue: [
@@ -540,6 +563,8 @@ TPRBScanner >> scanSpecialCharacter [
 
 { #category : #'private-scanning' }
 TPRBScanner >> scanStringSymbol [
+	"Converting the value of the literal token to a symbol to get rid of a layer of nested comments."
+	"Only supposed to be used when encountering an apostrophe."
 	| literalToken |
 	literalToken := self scanLiteralString.
 	literalToken value: literalToken value asSymbol.
@@ -548,6 +573,8 @@ TPRBScanner >> scanStringSymbol [
 
 { #category : #'private-scanning' }
 TPRBScanner >> scanSymbol [
+	"Always return a literal token but only recognises Identifier and keyword strings.
+	 Therefor any other string lead to an empty string value."
 	[ characterType = #alphabetic or: [ currentCharacter = $: ] ] whileTrue: [
 		self scanName.
 		currentCharacter = $: ifTrue: [
