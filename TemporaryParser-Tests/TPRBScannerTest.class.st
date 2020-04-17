@@ -215,17 +215,7 @@ TPRBScannerTest >> testNextFloatNumbersCanBeNegative [
 	| scanner token |
 	scanner := self buildScannerForText: '-3.2'.
 	token := scanner next.
-	self assert: token isNumberLiteralToken.
 	self assert: token value equals: -3.2.
-]
-
-{ #category : #testNumberLiteral }
-TPRBScannerTest >> testNextFloatNumbersCanBeNegativeNumbers [
-	
-	| scanner token |
-	scanner := self buildScannerForText: '-3.2'.
-	token := scanner next.
-	self assert: token isNumberLiteralToken.
 ]
 
 { #category : #testNumberLiteral }
@@ -522,6 +512,16 @@ TPRBScannerTest >> testNextKeywordValueIsStartToStop [
 ]
 
 { #category : #testError }
+TPRBScannerTest >> testNextLiteralBeginningWithApostropheThrowsError [
+	| scanner token |
+	scanner := self buildScannerForText: '#'''.
+	token := scanner next.
+	self assert: token isError.
+	self assert: token value equals: #''.
+	self assert: token cause equals: 'Unmatched '' in string literal.'.
+]
+
+{ #category : #testError }
 TPRBScannerTest >> testNextLiteralBeginningWithDigitThrowsError [
 	| scanner token |
 	scanner := self buildScannerForText: '#123alpha'.
@@ -676,6 +676,15 @@ TPRBScannerTest >> testNextLiteralWithMultipleHashtagTrimThem [
 	scanner := self buildScannerForText: '########literal'.
 	token := scanner next.
 	self assert: token value equals: 'literal'.
+]
+
+{ #category : #testNumberLiteral }
+TPRBScannerTest >> testNextNegativeFloatNumbersIsNumberLiteral [
+	
+	| scanner token |
+	scanner := self buildScannerForText: '-3.2'.
+	token := scanner next.
+	self assert: token isNumberLiteralToken.
 ]
 
 { #category : #testNumberLiteral }
