@@ -141,6 +141,73 @@ TPRBScannerTest >> testNextBeginningWithDigitIsNumber [
 	self assert: token isNumberLiteralToken.
 ]
 
+{ #category : #testBinarySelector }
+TPRBScannerTest >> testNextBinaryGivesBinarySelector [
+	| scanner token |
+	scanner := self buildScannerForText: '+'.
+	token := scanner next.
+	self assert: token isBinary.
+]
+
+{ #category : #testBinarySelector }
+TPRBScannerTest >> testNextBinarySelectorCanBeMultipleBinaries [
+	| scanner token |
+	scanner := self buildScannerForText: '+-=/'.
+	token := scanner next.
+	self assert: token isBinary.
+	self assert: token value equals: '+-=/'.
+]
+
+{ #category : #testStart }
+TPRBScannerTest >> testNextBinarySelectorStartAtFirstLetter [
+	| scanner token |
+	scanner := self buildScannerForText: '+-=/'.
+	token := scanner next.
+	self assert: token value equals: '+-=/'.
+	self assert: token start equals: 1.
+]
+
+{ #category : #testStop }
+TPRBScannerTest >> testNextBinarySelectorStopAtLastLetter [
+	| scanner token |
+	scanner := self buildScannerForText: '+-=/'.
+	token := scanner next.
+	self assert: token value equals: '+-=/'.
+	self assert: token stop equals: 4.
+]
+
+{ #category : #testBinarySelector }
+TPRBScannerTest >> testNextBinarySelectorStopsAtNonBinary [
+	| scanner token |
+	scanner := self buildScannerForText: '+a'.
+	token := scanner next.
+	self assert: token isBinary.
+	self assert: token value equals: '+'.
+	
+	scanner := self buildScannerForText: '+1'.
+	token := scanner next.
+	self assert: token isBinary.
+	self assert: token value equals: '+'.
+	
+	scanner := self buildScannerForText: '+('.
+	token := scanner next.
+	self assert: token isBinary.
+	self assert: token value equals: '+'.
+	
+	scanner := self buildScannerForText: '+`'.
+	token := scanner next.
+	self assert: token isBinary.
+	self assert: token value equals: '+'.
+]
+
+{ #category : #testBinarySelector }
+TPRBScannerTest >> testNextBinarySelectorValueIsBinary [
+	| scanner token |
+	scanner := self buildScannerForText: '+'.
+	token := scanner next.
+	self assert: token value equals: '+'.
+]
+
 { #category : #testSeparators }
 TPRBScannerTest >> testNextDoesNotAddLineBreakToComments [
 	| scanner token |
@@ -190,6 +257,15 @@ TPRBScannerTest >> testNextEOFContainsCommentsWhenNoOtherToken [
 	self assert: token start equals: 16.
 ]
 
+{ #category : #testLiteral }
+TPRBScannerTest >> testNextFalseIsLiteral [
+	| scanner token |
+	scanner := self buildScannerForText: 'false'.
+	token := scanner next.
+	self assert: token isLiteralToken.
+	self assert: token value equals: false.
+]
+
 { #category : #testSeparators }
 TPRBScannerTest >> testNextFirstTokenContainsFollowingComments [ 
 	| scanner token |
@@ -215,17 +291,7 @@ TPRBScannerTest >> testNextFloatNumbersCanBeNegative [
 	| scanner token |
 	scanner := self buildScannerForText: '-3.2'.
 	token := scanner next.
-	self assert: token isNumberLiteralToken.
 	self assert: token value equals: -3.2.
-]
-
-{ #category : #testNumberLiteral }
-TPRBScannerTest >> testNextFloatNumbersCanBeNegativeNumbers [
-	
-	| scanner token |
-	scanner := self buildScannerForText: '-3.2'.
-	token := scanner next.
-	self assert: token isNumberLiteralToken.
 ]
 
 { #category : #testNumberLiteral }
@@ -256,6 +322,15 @@ TPRBScannerTest >> testNextHashtagCanNotStandAlone [
 	scanner := self buildScannerForText: '#'.
 	token := scanner next.
 	self assert: token isError.
+]
+
+{ #category : #testLiteral }
+TPRBScannerTest >> testNextHashtagStringIsLiteral [
+	| scanner token |
+	scanner := self buildScannerForText: '#''the world has changed'''.
+	token := scanner next.
+	self assert: token isLiteralToken.
+	self assert: token value equals: #'the world has changed'.
 ]
 
 { #category : #testIdentifiers }
@@ -345,7 +420,7 @@ TPRBScannerTest >> testNextIdentifierCanNotHaveBinary [
 	
 ]
 
-{ #category : #testIdentifiers }
+{ #category : #testStart }
 TPRBScannerTest >> testNextIdentifierStartAtFirstLetter [
 	| scanner token |
 	scanner := self buildScannerForText: 'firstToken'.
@@ -354,7 +429,7 @@ TPRBScannerTest >> testNextIdentifierStartAtFirstLetter [
 	
 ]
 
-{ #category : #testIdentifiers }
+{ #category : #testStop }
 TPRBScannerTest >> testNextIdentifierStopAtLastLetter [
 	| scanner token |
 	scanner := self buildScannerForText: 'firstToken'.
@@ -372,7 +447,7 @@ TPRBScannerTest >> testNextIdentifierValueIsName [
 	
 ]
 
-{ #category : #testKeyword }
+{ #category : #testStart }
 TPRBScannerTest >> testNextKeyWordStartAtFirstLetter [
 	| scanner token |
 	scanner := self buildScannerForText: 'firstToken:'.
@@ -493,7 +568,7 @@ TPRBScannerTest >> testNextKeywordCanNotBeginWithDigit [
 	
 ]
 
-{ #category : #testKeyword }
+{ #category : #testStop }
 TPRBScannerTest >> testNextKeywordStopAtColon [
 	| scanner token |
 	scanner := self buildScannerForText: 'firstToken:'.
@@ -522,12 +597,42 @@ TPRBScannerTest >> testNextKeywordValueIsStartToStop [
 ]
 
 { #category : #testError }
+TPRBScannerTest >> testNextLiteralBeginningWithApostropheThrowsError [
+	| scanner token |
+	scanner := self buildScannerForText: '#'''.
+	token := scanner next.
+	self assert: token isError.
+	self assert: token value equals: #''.
+	self assert: token cause equals: 'Unmatched '' in string literal.'.
+]
+
+{ #category : #testError }
 TPRBScannerTest >> testNextLiteralBeginningWithDigitThrowsError [
 	| scanner token |
 	scanner := self buildScannerForText: '#123alpha'.
 	token := scanner next.
 	self assert: token isError.
 	self assert: token value equals: '1'.
+	self assert: token cause equals: 'Expecting a literal type'.
+]
+
+{ #category : #testError }
+TPRBScannerTest >> testNextLiteralBeginningWithSpecialThrowsError [
+	| scanner token |
+	scanner := self buildScannerForText: '#^'.
+	token := scanner next.
+	self assert: token isError.
+	self assert: token value equals: '^'.
+	self assert: token cause equals: 'Expecting a literal type'.
+]
+
+{ #category : #testError }
+TPRBScannerTest >> testNextLiteralBeginningWithUnknownThrowsError [
+	| scanner token |
+	scanner := self buildScannerForText: '#`'.
+	token := scanner next.
+	self assert: token isError.
+	self assert: token value equals: '`'.
 	self assert: token cause equals: 'Expecting a literal type'.
 ]
 
@@ -541,27 +646,22 @@ TPRBScannerTest >> testNextLiteralCanBeBinary [
 ]
 
 { #category : #testLiteral }
+TPRBScannerTest >> testNextLiteralCanContainColon [
+	| scanner token |
+	
+	scanner := self buildScannerForText: '#al:pha'.
+	token := scanner next.
+	self assert: token isLiteralToken.
+	self assert: token value equals: #'al:pha'.
+]
+
+{ #category : #testLiteral }
 TPRBScannerTest >> testNextLiteralCanContainDigits [
 	| scanner token |
 	scanner := self buildScannerForText: '#alpha123beta456'.
 	token := scanner next.
 	self assert: token isLiteralToken.
-]
-
-{ #category : #testLiteral }
-TPRBScannerTest >> testNextLiteralCanContainSomeSpecialCaracters [
-	| scanner token |
-	scanner := self buildScannerForText: '#_alpha'.
-	token := scanner next.
-	self assert: token value equals: #_alpha.
-	
-	scanner := self buildScannerForText: '#al:pha'.
-	token := scanner next.
-	self assert: token value equals: #'al:pha'.
-	
-	scanner := self buildScannerForText: '#alpha$'.
-	token := scanner next.
-	self assert: token value equals: #alpha.
+	self assert: token value equals: #alpha123beta456.
 ]
 
 { #category : #testLiteral }
@@ -611,11 +711,11 @@ TPRBScannerTest >> testNextLiteralCharacterCanBeAnyCharacter [
 	token := scanner next.
 	self assert: token isLiteralToken.
 	
-	scanner := self buildScannerForText: '$_'.
+	scanner := self buildScannerForText: '$^'.
 	token := scanner next.
 	self assert: token isLiteralToken.
 	
-	scanner := self buildScannerForText: '$^'.
+	scanner := self buildScannerForText: '$`'.
 	token := scanner next.
 	self assert: token isLiteralToken.
 ]
@@ -643,9 +743,9 @@ TPRBScannerTest >> testNextLiteralCharacterHasCharacterAsValue [
 	token := scanner next.
 	self assert: token value equals: $$.
 	
-	scanner := self buildScannerForText: '$_'.
+	scanner := self buildScannerForText: '$`'.
 	token := scanner next.
-	self assert: token value equals: $_.
+	self assert: token value equals: $`.
 	
 	scanner := self buildScannerForText: '$^'.
 	token := scanner next.
@@ -670,12 +770,71 @@ TPRBScannerTest >> testNextLiteralCharacterWithAMissingCharacter [
 
 ]
 
+{ #category : #testStart }
+TPRBScannerTest >> testNextLiteralStartAtFirstLetter [
+	| scanner token |
+	scanner := self buildScannerForText: '########literal'.
+	token := scanner next.
+	self assert: token isLiteralToken.
+	self assert: token start equals: 1.
+]
+
+{ #category : #testStop }
+TPRBScannerTest >> testNextLiteralStopAtLastLetter [
+	| scanner token |
+	scanner := self buildScannerForText: '########literal'.
+	token := scanner next.
+	self assert: token isLiteralToken.
+	self assert: token stop equals: 15.
+]
+
 { #category : #testLiteral }
 TPRBScannerTest >> testNextLiteralWithMultipleHashtagTrimThem [
 	| scanner token |
 	scanner := self buildScannerForText: '########literal'.
 	token := scanner next.
 	self assert: token value equals: 'literal'.
+]
+
+{ #category : #testKeyword }
+TPRBScannerTest >> testNextMultipleKeywordColonIsSufficientAfterFirstKeyword [
+	| scanner token |
+	scanner := self buildScannerForText: 'firstToken::'.
+	token := scanner next.
+	self assert: token isMultiKeyword.
+	self assert: token value equals: 'firstToken::'.
+	
+	scanner := self buildScannerForText: 'firstToken::::::'.
+	token := scanner next.
+	self assert: token isMultiKeyword.
+	self assert: token value equals: 'firstToken::::::'.
+]
+
+{ #category : #testStart }
+TPRBScannerTest >> testNextMultipleKeywordStartAtFirstLetter [
+	| scanner token |
+	scanner := self buildScannerForText: 'firstToken:secondToken:'.
+	token := scanner next.
+	self assert: token isMultiKeyword.
+	self assert: token start equals: 1.
+]
+
+{ #category : #testStop }
+TPRBScannerTest >> testNextMultipleKeywordStopAtLastLetter [
+	| scanner token |
+	scanner := self buildScannerForText: 'firstToken:secondToken:'.
+	token := scanner next.
+	self assert: token isMultiKeyword.
+	self assert: token stop equals: 23.
+]
+
+{ #category : #testNumberLiteral }
+TPRBScannerTest >> testNextNegativeFloatNumbersIsNumberLiteral [
+	
+	| scanner token |
+	scanner := self buildScannerForText: '-3.2'.
+	token := scanner next.
+	self assert: token isNumberLiteralToken.
 ]
 
 { #category : #testNumberLiteral }
@@ -700,6 +859,15 @@ TPRBScannerTest >> testNextNegativeNumberIsNumberLiteral [
 	scanner := self buildScannerForText: '-12'.
 	token := scanner next.
 	self assert: token isNumberLiteralToken.
+]
+
+{ #category : #testLiteral }
+TPRBScannerTest >> testNextNilIsLiteral [
+	| scanner token |
+	scanner := self buildScannerForText: 'nil'.
+	token := scanner next.
+	self assert: token isLiteralToken.
+	self assert: token value equals: nil.
 ]
 
 { #category : #testNumberLiteral }
@@ -836,7 +1004,7 @@ TPRBScannerTest >> testNextStringIsLiteral [
 	self assert: token isLiteralToken.
 ]
 
-{ #category : #testSeparators }
+{ #category : #testStart }
 TPRBScannerTest >> testNextTokenStartAfterComment [
 	"Tests that the next token adapts starting point according to it."
 	| scanner token |
@@ -847,7 +1015,7 @@ TPRBScannerTest >> testNextTokenStartAfterComment [
 	
 ]
 
-{ #category : #testSeparators }
+{ #category : #testStart }
 TPRBScannerTest >> testNextTokenStartAfterLineBreak [
 	"Tests that the next token adapts starting point according to it."
 	| scanner token |
@@ -859,7 +1027,7 @@ firstToken'.
 	
 ]
 
-{ #category : #testSeparators }
+{ #category : #testStart }
 TPRBScannerTest >> testNextTokenStartAfterSpaces [
 	"Tests that the next token adapts starting point according to it."
 	| scanner token |
@@ -870,7 +1038,7 @@ TPRBScannerTest >> testNextTokenStartAfterSpaces [
 	
 ]
 
-{ #category : #testSeparators }
+{ #category : #testStart }
 TPRBScannerTest >> testNextTokenStartAfterTab [
 	"Tests that the next token adapts starting point according to it."
 	| scanner token |
@@ -1008,13 +1176,43 @@ TPRBScannerTest >> testNextTrimsMiddleTab [
 	
 ]
 
+{ #category : #testLiteral }
+TPRBScannerTest >> testNextTrueIsLiteral [
+	| scanner token |
+	scanner := self buildScannerForText: 'true'.
+	token := scanner next.
+	self assert: token isLiteralToken.
+	self assert: token value equals: true.
+]
+
+{ #category : #testKeyword }
+TPRBScannerTest >> testNextTwoKeywordIsMultipleKeyword [
+	| scanner token |
+	scanner := self buildScannerForText: 'firstToken:secondToken:'.
+	token := scanner next.
+	self assert: token isMultiKeyword.
+	self assert: token value equals: 'firstToken:secondToken:'.
+]
+
 { #category : #testIdentifiers }
 TPRBScannerTest >> testNextUnderscoreWithOnlyDigitsIsIdentifier [
+
+	"This test shows that the underscore is an alphabetic character."
 	| scanner token |
 	scanner := self buildScannerForText: '_123'.
 	token := scanner next.
 	self assert: token isIdentifier.
 	self assert: token value equals: '_123'.
+]
+
+{ #category : #testError }
+TPRBScannerTest >> testNextUnknownCharacterThrowsError [
+	| scanner token |
+	scanner := self buildScannerForText: '`'.
+	token := scanner next.
+	self assert: token isError.
+	self assert: token value equals: '`'.
+	self assert: token cause equals: 'Unknown character'.
 ]
 
 { #category : #testNumberLiteral }
