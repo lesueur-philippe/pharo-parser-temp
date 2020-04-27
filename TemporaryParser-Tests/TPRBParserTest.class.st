@@ -56,32 +56,40 @@ TPRBParserTest >> parserClass [
 	^ self class parserClass
 ]
 
-{ #category : #'tests parsing' }
-TPRBParserTest >> testArray [
+{ #category : #testArray }
+TPRBParserTest >> testArrayNodesContainRightAmountOfStatementsAndPeriods [
+	"1. The array to be parsed into an array node.
+	 2. The number of statements in the array node.
+	 3. The number of periods in the array node."
 	| tree |
-	#(('{}' 0 0) ('{.}' 0 1) ('{..}' 0 2) ('{foo. bar}' 2 1) ('{foo. bar.}' 2 2) ('{foo. bar. .}' 2 3) ('{. foo. bar}' 2 2) ('{foo.. bar}' 2 2))
-	 do: [ :each |
-		tree := self parserClass parseExpression: each first.
-		self assert: tree statements size equals: each second.
-		self assert: tree periods size equals: each last.
-		self assert: tree left equals: 1.
-		self assert: tree right equals: each first size ]
+	#(('{}' 0 0) 
+	  ('{.}' 0 1) 
+	  ('{..}' 0 2) 
+	  ('{foo. bar}' 2 1) 
+	  ('{foo. bar.}' 2 2) 
+	  ('{foo. bar. .}' 2 3) 
+	  ('{. foo. bar}' 2 2) 
+	  ('{foo.. bar}' 2 2)) do: [ :each | tree := self parserClass parseExpression: each first.
+													self assert: tree statements size equals: each second.
+													self assert: tree periods size equals: each last. ]
 ]
 
-{ #category : #tests }
-TPRBParserTest >> testArrayNodesArentArrays [
-"Although an RBArrayNode represents an array, it is not an Array-like object.
-Therefore it shouldn't return true for message #isArray (like an instance of a real
-array would"
-	| arrayNode nonArrayNode |
-	arrayNode := self parserClass parseExpression: '{ 1 . 2 . 3}'.
-				
-	nonArrayNode := self parserClass parseExpression: 'a := 3'.
-				
-	self deny: arrayNode isArray.
-	self assert: arrayNode isDynamicArray.
-	self deny: nonArrayNode isDynamicArray
-
+{ #category : #'error testing' }
+TPRBParserTest >> testBadlyPlacedPragmaRaiseError [
+	"The placement in the string will have an impact on the parsing methods involved.
+	 Pragmas are supposed to be written in the beginning of a method."
+	self shouldnt: [(self parserClass parseMethod: 'foo | token | <some: #tag> ^true')] 
+		  raise: SyntaxErrorNotification.
+							
+	self should: [(self parserClass parseMethod: 'foo | token | ^true <some: #tag>')]
+		  raise: 	SyntaxErrorNotification.
+			
+	self should: [(self parserClass parseMethod: 'foo | token | token:= 5 <some: #tag> ^token')]
+		  raise: 	SyntaxErrorNotification.
+	
+	self should: [(self parserClass parseMethod: 'foo | token |  token messaged <some: #tag> ^token')]
+		  raise: 	SyntaxErrorNotification.
+	
 ]
 
 { #category : #'tests interval' }
@@ -104,7 +112,8 @@ TPRBParserTest >> testBinarySelectors [
 		binarySelector ::= binaryCharacter+"
 
 	| binaryCharacters selectorStrings |
-
+	"Create a collection of strings to parse.
+	 The collection is made of every possible string sized from 1 to 3 selectors."
 	binaryCharacters := '!%&*+,/<=>?@\~-'.
 	selectorStrings := OrderedCollection new.
 	binaryCharacters do: [:first |
@@ -114,6 +123,7 @@ TPRBParserTest >> testBinarySelectors [
 			binaryCharacters do: [:third |
 				selectorStrings addLast: (String with: first with: second with: third)]]].
 
+	""
 	selectorStrings do: [:each | | methodNode messageNode |
 		methodNode := self parseMethod: each, 'anObject
 	^self',each,'anObject'.
@@ -168,54 +178,50 @@ TPRBParserTest >> testBlockReturnNode [
 	
 ]
 
-{ #category : #'tests parsing' }
-TPRBParserTest >> testCascade [
-	self assert: (self parserClass parseExpression: ' self msg; yourself') isCascade.
-	self assert: (self parserClass parseExpression: ' self msg:(arg msg:arg); yourself') isCascade.
-	self should: [ self parserClass parseExpression: ' (self msg); yourself' ] raise: SyntaxErrorNotification.
-	self should: [ self parserClass parseExpression: ' self ; yourself' ] raise: SyntaxErrorNotification.
-	self should: [ self parserClass parseExpression: ' (self) ; yourself' ] raise: SyntaxErrorNotification
+{ #category : #testCascade }
+TPRBParserTest >> testCascadeReplacement [
+	"Cascade is composed of an ordered collection of messages, each with the same receiver."
+	| cascade |
+	cascade := self parserClass parseExpression: 'self foo; bar; baz'.
+	"The replacement is made on the collection."
+	(cascade messages at: 2) 
+		replaceWith: (self parserClass parseExpression: 'self bar: 2').
+	self assert: cascade
+		  equals: (self parserClass parseExpression: 'self foo; bar: 2; baz').
+		
+	"The replacement can be a message with another receiver"
+	(cascade messages at: 3) 
+		replaceWith: (self parserClass parseExpression: 'notself barataba').
+	self assert: (cascade messages at: 3) receiver 
+		  equals: (self parserClass parseExpression: 'notself').
 ]
 
-{ #category : #'tests replacements' }
-TPRBParserTest >> testCascadeReplacement [
+{ #category : #'garbage tests' }
+TPRBParserTest >> testCascadeReplacementCanLeadToOddErrors [
 	| cascade |
 	cascade := self parserClass parseExpression: 'self foo; bar; baz'.
 	(cascade messages at: 2) 
-		replaceWith: (self parserClass parseExpression: 'self bar: 2').
-	self compare: cascade
-		to: (self parserClass parseExpression: 'self foo; bar: 2; baz')
+		replaceWith: (self parserClass parseExpression: '2').
+		
+	cascade := self parserClass parseExpression: 'self foo; bar; baz'.
+	(cascade messages at: 2) 
+		replaceWith: (TPRBParser parseExpression: 'temp := temp bar').
+		
+	"This tests create an error in the printing of self and parent of the node."
 ]
 
-{ #category : #'tests comparing' }
-TPRBParserTest >> testComparingTrees [
-	self compare: self treeWithEverything to: self treeWithEverything.
-	self compare: self treeWithReallyEverything to: self treeWithReallyEverything.
-	
-	self exampleClasses do: [ :class |
-		class selectors do: [ :selector | 
-			self
-				compare: (class parseTreeFor: selector) 
-				to: (class parseTreeFor: selector) ] ]
+{ #category : #'error testing' }
+TPRBParserTest >> testCascadeWithNoMessageRaiseError [
+	self should: [ self parserClass parseExpression: ' (self msg); yourself' ] raise: SyntaxErrorNotification.
+	self should: [ self parserClass parseExpression: ' self ; yourself' ] raise: SyntaxErrorNotification.
+	self should: [ self parserClass parseExpression: ' (self) ; yourself' ] raise: SyntaxErrorNotification.
+	self should: [ self parserClass parseExpression: ' self msg ;  ; yourself' ] raise: SyntaxErrorNotification
 ]
 
-{ #category : #tests }
-TPRBParserTest >> testCopy [
-	| tree |
-	tree := self treeWithEverything.
-	self compare: tree to: tree copy.
-	tree := self treeWithReallyEverything.
-	self compare: tree to: tree copy.
-	
-	self exampleClasses do: [ :class |
-		class selectors do: [ :each |
-			tree := class parseTreeFor: each.
-			self compare: tree to: tree copy ] ]
-]
-
-{ #category : #tests }
+{ #category : #'test utils' }
 TPRBParserTest >> testCopyInContext [
 	| tree |
+	self deprecated: 'This test should be in the nodes tests'.
 	tree := self treeWithEverything.
 	self compare: tree to: (tree copyInContext: Dictionary new).
 	tree := self treeWithReallyEverything.
@@ -227,22 +233,44 @@ TPRBParserTest >> testCopyInContext [
 			self compare: tree to: (tree copyInContext: Dictionary new) ] ]
 ]
 
-{ #category : #tests }
-TPRBParserTest >> testCreationProtocol [
-	| messageNode |
-	self compare: (TPRBMessageNode 
-				receiver: (TPRBVariableNode named: 'self')
-				selector: #+
-				arguments: (Array with: (TPRBLiteralNode value: 0)))
-		to: (self parserClass parseExpression: 'self + 0').
-	messageNode := TPRBMessageNode receiver: (TPRBVariableNode named: 'self') selector: #foo.
-	self compare: (TPRBMethodNode selector: #bar
-				body: (TPRBSequenceNode statements: (OrderedCollection 
-								with: (TPRBCascadeNode messages: (OrderedCollection with: messageNode with: messageNode)))))
-		to: (self parserClass parseMethod: 'bar self foo; foo')
+{ #category : #'test utils' }
+TPRBParserTest >> testCopyReproduceGivenTree [
+	| tree |
+	self deprecated: 'This test should be in the nodes tests'.
+	tree := self treeWithEverything.
+	self compare: tree to: tree copy.
+	tree := self treeWithReallyEverything.
+	self compare: tree to: tree copy.
 ]
 
-{ #category : #'tests comparing' }
+{ #category : #'to be reworked' }
+TPRBParserTest >> testCreationProtocol [
+	| messageNode |
+	"Verify the good parsing of an expression."
+	self compare: (self parserClass parseExpression: 'self + 0')
+		  to: (TPRBMessageNode 
+				receiver: (TPRBVariableNode named: 'self')
+				selector: #+
+				arguments: (Array with: (TPRBLiteralNode value: 0))).
+		
+	"Verify the good parsing of a method."
+	messageNode := TPRBMessageNode receiver: (TPRBVariableNode named: 'self') selector: #foo.
+	self compare: (self parserClass parseMethod: 'bar self foo; foo')
+		to: (TPRBMethodNode selector: #bar
+				body: (TPRBSequenceNode statements: (OrderedCollection 
+								with: (TPRBCascadeNode messages: (OrderedCollection with: messageNode with: messageNode)))))
+]
+
+{ #category : #testArray }
+TPRBParserTest >> testDelimitationsOfArrayNodesAreBrackets [
+	| tree |
+	#('{}' '{.}' '{..}' '{foo. bar}' '{foo. bar.}' '{foo. bar. .}' '{. foo. bar}' '{foo.. bar}')
+	do: [ :each |  tree := self parserClass parseExpression: each.
+						self assert: tree left equals: 1.
+						self assert: tree right equals: each size ]
+]
+
+{ #category : #'to be reworked' }
 TPRBParserTest >> testEqualToWithMapping [
 	| tree |
 	tree := self treeWithEverything.
@@ -256,7 +284,7 @@ TPRBParserTest >> testEqualToWithMapping [
 			self assert: (tree equalTo: tree withMapping: Dictionary new) ] ]
 ]
 
-{ #category : #'tests comparing' }
+{ #category : #'to be reworked' }
 TPRBParserTest >> testEquivalentExceptRenaming [
 	#(#('a 3-4' 'a 4-3' false) #('a #[3 4]' 'a #(3 4)' false) #('a variable1 ~~ "comment" variable2' 'a variable1 ~~ variable2' true) #('a variable1' 'a variable2' false) #('a [:a :b | a + b]' 'a [:b :a | a + b]' false) #('a | a b | a + b' 'a | b a | a + b' true) #('a | a | a msg1; msg2' 'a | b | b msg2; msg2' false) #('a c' 'a d' true) #('a | a b | a := b. ^b msg1' 'a | a b | b := a. ^a msg1' true) #('a | a b | a := b. ^b msg1: a' 'a | a b | b := a. ^b msg1: a' false) #('a: b b + 4' 'a: e e + 4' true) #('a: b b + 4' 'b: b b + 4' false) #('a: b b: c b + c' 'a: c b: b c + b' true) #('a: a b: b a + b' 'a: b b: a a + b' false))
 		do: [ :each | 
@@ -265,7 +293,82 @@ TPRBParserTest >> testEquivalentExceptRenaming [
 				identicalTo: each last ]
 ]
 
-{ #category : #'tests parsing' }
+{ #category : #'error testing' }
+TPRBParserTest >> testFaultyLiteralRaiseSyntaxError [
+	#('#"bar"foo' '# foo' '#1' '#12' '#12.3' '# 1' '##1' '#"bar"1') 
+		do: [ :expr | 
+		self should: [self parserClass parseExpression: expr] raise: SyntaxErrorNotification ]
+]
+
+{ #category : #'garbage tests' }
+TPRBParserTest >> testGarbageAssignementOfANonVariable [
+	"Raising a syntax exception when trying to do an assignement on a message."
+	self should: [self parserClass parseExpression: 'receiver selector := 1 + 2'] raise: SyntaxErrorNotification.
+]
+
+{ #category : #'garbage tests' }
+TPRBParserTest >> testGarbageAssignementWithMisplacedDot [
+	"The idea is for the parser to realise the first dot isn't supposed to be here and select it. Also add a side note to give suggestion     on the provenance of the error."
+	self should: [self parserClass parseExpression: 'temp := .1 + 2.'] raise: SyntaxErrorNotification.
+	self should: [self parserClass parseExpression: 'temp := 1. + 2.'] raise: SyntaxErrorNotification.
+	self should: [self parserClass parseExpression: 'temp := 1 +. 2.'] raise: SyntaxErrorNotification.
+	
+	"The same could be made for other special characters."
+	self should: [self parserClass parseExpression: 'temp := ;1 + 2.'] raise: SyntaxErrorNotification.
+	self should: [self parserClass parseExpression: 'temp := ,1 + 2.'] raise: SyntaxErrorNotification.
+]
+
+{ #category : #'garbage tests' }
+TPRBParserTest >> testGarbageEncouteringEndOfStatement [
+	"Could propose multiple reparations like assignement, period, array..."
+	self should: [self parserClass parseExpression: 'temp 1 + 3'] raise: SyntaxErrorNotification.
+]
+
+{ #category : #'garbage tests' }
+TPRBParserTest >> testGarbageForgottenDotAfterAssignement [
+	| tree child error |
+	self shouldnt: [self parserClass parseExpression: '|temp | temp := 1 + 2 temp + 3'] raise: SyntaxErrorNotification.
+	
+	tree := self parserClass parseExpression: '|temp | temp := 1 + 2 temp + 3'.
+	self assert: tree isSequence.
+	
+	"There should only be one statement as there is no dot."
+	child := tree statements.
+	self assert: (child size) equals: 1.
+	self assert: child first isAssignment.
+	
+	"Getting the part changed by missing dot."
+	error := child first value receiver arguments first.
+	self assert: error isMessage.
+	self assert: error receiver value equals: 2.
+	self assert: error selector equals: #temp
+	
+	
+	
+]
+
+{ #category : #'garbage tests' }
+TPRBParserTest >> testGarbageForgottenReceiver [
+	"Test made in sight of implementing the search of previous litterals when encountering an unknown 
+	 variable in case it is, in fact, a selector. This works for cascade (forgotten ;) or missing 
+	 receiver like self ..."
+	self should: [self parserClass parseExpression: '|temp | temp := 1 + 2. + 3'] raise: SyntaxErrorNotification.
+]
+
+{ #category : #testPragma }
+TPRBParserTest >> testIdentificationOfPrimitiveMethods [
+	"Verify if there is the pragma primitive in the parsed method."
+	"The string is the element to be parsed.
+	 The boolean is the expected result. true : is primitive
+													false : is not primitive."
+	#(('foo ^true' false ) 
+	  ('foo <some: #tag> ^true' false ) 
+	  (' foo <some: #tag> <primitive: 123> ^self' true ) 
+	  ('foo primitive:= 123. ^self' false)) 
+	do: [:each | self assert: (self parserClass parseMethod: each first) isPrimitive equals: each last]
+]
+
+{ #category : #'error testing' }
 TPRBParserTest >> testInvalidPragmaPosition [
 	#(
 	'foo self. <foo: $a>'
@@ -276,7 +379,7 @@ TPRBParserTest >> testInvalidPragmaPosition [
 	do: [ :each | self should: [ self parserClass parseMethod: each ] raise: SyntaxErrorNotification ]
 ]
 
-{ #category : #tests }
+{ #category : #'to be reworked' }
 TPRBParserTest >> testIsA [
 	| nodes types |
 	nodes := Bag new.
@@ -289,7 +392,7 @@ TPRBParserTest >> testIsA [
 	self assertEmpty: nodes
 ]
 
-{ #category : #'tests parsing' }
+{ #category : #'to be reworked' }
 TPRBParserTest >> testLiteralArray [
 	| tree collection |
 	tree := self parserClass parseExpression: '#( a #b #''c'' . + - 1 -2 3.4 #true true #false false #nil nil "comment" ''string'' #[ 1 2 3 ] #(1 2 3))'.
@@ -299,7 +402,7 @@ TPRBParserTest >> testLiteralArray [
 		self assert: token value equals: value ]
 ]
 
-{ #category : #'tests interval' }
+{ #category : #testLiteral }
 TPRBParserTest >> testLiteralIntevals [
 	| tree |
 	tree := self parserClass parseExpression: '#(#a b #( c ))'.
@@ -308,7 +411,7 @@ TPRBParserTest >> testLiteralIntevals [
 	self assert: tree contents last contents first start equals: 11
 ]
 
-{ #category : #'tests matching' }
+{ #category : #'to be reworked' }
 TPRBParserTest >> testMatchInContext [
 	| tree |
 	tree := self treeWithEverything.
@@ -322,18 +425,18 @@ TPRBParserTest >> testMatchInContext [
 			self assert: (tree match: tree inContext: Dictionary new) ] ]
 ]
 
-{ #category : #tests }
+{ #category : #'to be reworked' }
 TPRBParserTest >> testMethodPatterns [
 	#(#('+ a ^self + a' #+) #('foo ^self foo' #foo) #('foo: a bar: b ^a + b' #foo:bar:))
 		do: [ :each | self assert: (self parserClass parseMethodPattern: each first) identicalTo: each last ]
 ]
 
-{ #category : #'tests parsing' }
+{ #category : #'error testing' }
 TPRBParserTest >> testNegativeNumberError [
 	self should: [ self parserClass parseExpression: '- 2' ] raise: SyntaxErrorNotification
 ]
 
-{ #category : #tests }
+{ #category : #'to be reworked' }
 TPRBParserTest >> testNodesDo [
 	| size |
 	size := 0.
@@ -341,7 +444,7 @@ TPRBParserTest >> testNodesDo [
 	self assert: size equals: 19
 ]
 
-{ #category : #'tests parsing' }
+{ #category : #testNumber }
 TPRBParserTest >> testNumberParsing [
 	| numbers node |
 	numbers := #(('1' 1) ('-1' -1) ('123' 123) ('123' 123) ('-123' -123) ('1.1' 1.1) ('-1.1' -1.1) ('1.23' 1.23) ('-1.23' -1.23) ('1e3' 1e3) ('1d3' 1d3) ('1q3' 1q3) ('-1e3' -1e3) ('1e-3' 1e-3) ('-1e-3' -1e-3) ('2r1e8'  2r1e8) ('-2r1e8' -2r1e8) ('2r1e-8' 2r1e-8) ('-2r1e-8' -2r1e-8) ('0.50s2' 0.50s2) ('0.500s3' 0.500s3) ('0.050s3' 0.050s3)).
@@ -351,7 +454,7 @@ TPRBParserTest >> testNumberParsing [
 		self assert: node value equals: spec second ]
 ]
 
-{ #category : #'tests parsing' }
+{ #category : #testNumber }
 TPRBParserTest >> testNumberRadixParsing [
 	2 to: 32 do: [ :radix | 
 		| radixString |
@@ -359,7 +462,7 @@ TPRBParserTest >> testNumberRadixParsing [
 		0 to: 72 do: [ :i | self assert: (self parserClass parseExpression: radixString , (i radix: radix)) value equals: i ] ]
 ]
 
-{ #category : #tests }
+{ #category : #'to be reworked' }
 TPRBParserTest >> testParents [
 	(Array with: self treeWithEverything with: self treeWithReallyEverything)
 		do: [ :tree | 
@@ -372,6 +475,29 @@ TPRBParserTest >> testParents [
 									(each parent isMessage and: [ each parent isCascaded ])
 										ifFalse: [ self assert: each parent identicalTo: node.
 											self assert: each methodNode identicalTo: root ] ] ] ] ]
+]
+
+{ #category : #'tests parsing' }
+TPRBParserTest >> testParseExpressionGivesTheWriteAmountOfStatements [
+	"Testing with a list of triplets.
+	 1. The string parsed.
+	 2. The number of statements expected in parsed string.
+	 3. The number of dots marking a period expected in parsed string."
+	| tree |
+	#(
+	('' 0 0) 
+	('.' 0 1) 
+	('| bar |' 0 0) 
+	('| bar | .' 0 1) 
+	('| bar | ..' 0 2) 
+	('foo. bar' 2 1) 
+	('foo. bar.' 2 2) 
+	('foo. bar. .' 2 3) 
+	('. foo. bar' 2 2)
+	('foo. bar. foo bar.' 3 3)) do: [ :each |
+		tree := self parserClass parseExpression: each first.
+		self assert: tree statements size equals: each second.
+		self assert: tree periods size equals: each last ]
 ]
 
 { #category : #'tests parsing faulty' }
@@ -440,7 +566,7 @@ TPRBParserTest >> testParseFaultyMethod [
 ]
 
 { #category : #'tests parsing faulty' }
-TPRBParserTest >> testParseFaultyMethodExpresionHasErrorNodeAsFinal [
+TPRBParserTest >> testParseFaultyMethodExpressionHasErrorNodeAsFinal [
 	| node strangeExpression |
 	
 	strangeExpression := 'method: asd  ^ asd. n'.
@@ -470,7 +596,7 @@ TPRBParserTest >> testParseFaultyPragma [
 	self assert: node pragmas first isFaulty
 ]
 
-{ #category : #'tests parsing' }
+{ #category : #'to be reworked' }
 TPRBParserTest >> testParseMethodWhichEndsWithUncompleteStringWithEscapedMarkAtTheEnd [
 	| node strangeMethod body statement message errorNode |
 	strangeMethod := '
@@ -504,7 +630,7 @@ TPRBParserTest >> testParseMethodWhichEndsWithUncompleteStringWithEscapedMarkAtT
 	self assert: errorNode errorMessage equals: 'Unmatched '' in string literal.' translated
 ]
 
-{ #category : #'tests parsing' }
+{ #category : #'to be reworked' }
 TPRBParserTest >> testParseMethodWithErrorTokenIsWellFormed [
 	| node strangeMethod body statement message errorNode |
 	strangeMethod := '
@@ -541,7 +667,7 @@ TPRBParserTest >> testParseMethodWithErrorTokenIsWellFormed [
 	self assert: errorNode errorMessage equals: 'Unmatched '' in string literal.' translated
 ]
 
-{ #category : #'tests parsing' }
+{ #category : #'tests parsing faulty' }
 TPRBParserTest >> testParseUnfinishedBlockWithFaultyBody [
 	| node unfinishedBlockExp missingArgExp unfinishedBlockAndMissingArgExp validBlock unfinishedBlockWithReturnExp|
 	"Parsing a block as a faulty expression, where the block body is faulty and there is a missing closing bracket,
@@ -566,13 +692,13 @@ indicate the invalid expression."
 	self deny: node body isFaulty
 ]
 
-{ #category : #'tests parsing' }
+{ #category : #'to be reworked' }
 TPRBParserTest >> testParserErrors [
 	#(#('self foo. + 3' 11) #('#(' 3) #('self 0' 6) #('self asdf;;asfd' 11)) 
 		do: [:each | self parseError: each]
 ]
 
-{ #category : #'tests parsing' }
+{ #category : #'to be reworked' }
 TPRBParserTest >> testParserErrorsWithErrorBlock [
 	"Parse source with errors and ensure we identify them"
 	
@@ -587,7 +713,16 @@ TPRBParserTest >> testParserErrorsWithErrorBlock [
 				self assert: errorCount equals: each last ]
 ]
 
-{ #category : #'tests parsing' }
+{ #category : #testArray }
+TPRBParserTest >> testParsingArrayGivesArrayNode [
+	| tree |
+	#('{}' '{foo}' '{foo. bar.}')
+	 do: [ :each |
+		tree := self parserClass parseExpression: each .
+		self assert: tree isDynamicArray.]
+]
+
+{ #category : #'to be reworked' }
 TPRBParserTest >> testParsingLiteralMessages [
 	self assert: (self parserClass parseExpression: 'nil self nil') isMessage.
 	self assert: (self parserClass parseExpression: 'self true') isMessage.
@@ -599,90 +734,12 @@ TPRBParserTest >> testParsingLiteralMessages [
 	self assert: (self parserClass parseMethod: 'false') isMethod
 ]
 
-{ #category : #tests }
-TPRBParserTest >> testPositions [
-	| blockNode |
-	blockNode := self parserClass parseExpression: '[:a :b | ]'.
-	self assert: blockNode left equals: 1.
-	self assert: blockNode right equals: 10.
-	self assert: blockNode bar equals: 8.
-	self assert: blockNode sourceInterval equals: (1 to: 10).
-	self assert: blockNode size equals: 1.	"test dummy collection protocol"
-	blockNode printString.	"coverage"
-	self deny: (blockNode isLast: (TPRBVariableNode named: 'b')).
-	self
-		compare: blockNode
-		to:
-			(TPRBBlockNode
-				arguments: (OrderedCollection with: (TPRBVariableNode named: 'a') with: (TPRBVariableNode named: 'b'))
-				body: (TPRBSequenceNode statements: OrderedCollection new))
-]
-
-{ #category : #'tests parsing' }
-TPRBParserTest >> testPragmaConstantLiteralArgument [
-	| primitiveDeclartion validPragma invalidPragma |
-	"primitive declarations with variable (code) are allowed"
-	primitiveDeclartion := 'foo 
-	<primitive: #dooo module: #bar error: code>
-	^ nil'.
-	"#Point as argument is allowed"
-	validPragma := 'foo 
-	<return: #Point>
-	^ 0@0'.
-	"Point as argument is not allowed"
-	invalidPragma := 'foo 
-	<return: Point>
-	^ 0@0'.
-	self shouldnt:[self parserClass parseMethod: primitiveDeclartion] raise: Exception.
-	self shouldnt:[self parserClass 	parseMethod: validPragma] raise: Exception.
-	self should:[self parserClass parseMethod: invalidPragma] raise: Exception.
-	
-
-]
-
-{ #category : #'tests parsing' }
-TPRBParserTest >> testPragmaImplicitLiteralArrayIsInvalid [
-	| pragmaWithExpressionAsArgument pragmaWithLiteralArrayAsArgument pragmaWithStringAsArgument |
-	"a pragma with arguments that look like code
-	(3+4) were implicitly converted to a literal array
-	#(3+4), this is not allowed anymore"
-	pragmaWithExpressionAsArgument := 'foo 
-	<func: (3+4) res: 7>
-	^ self'.
-	self should:[self parserClass parseMethod: pragmaWithExpressionAsArgument] raise: Exception.
-
-	"an explicit literal array is allowed"
-	pragmaWithLiteralArrayAsArgument := 'foo 
-	<func: #(3+4) res: 7>
-	^ self'.
-	"Should work"
-	self parserClass parseMethod: pragmaWithLiteralArrayAsArgument.
-
-	"and of course a string literal"
-	pragmaWithStringAsArgument := 'foo 
-	<func: ''(3+4)'' res: 7>
-	^ self'.
-	"should work"
-	self parserClass parseMethod: pragmaWithStringAsArgument
-
-]
-
-{ #category : #'tests parsing' }
-TPRBParserTest >> testPragmaPrimitiveError [
-	| tree  pragma |
-	tree := self parserClass 
-				parseMethod: 'veryBasicAt: index 
-	<primitive: #dooo module: #bar error: code>
-	^ code'.
-	
-	self assert: tree pragmas size equals: 1.
-	
-	pragma := tree pragmas first.
-	self assert: pragma selector equals: #primitive:module:error:
-]
-
-{ #category : #'tests parsing' }
-TPRBParserTest >> testPragmas [
+{ #category : #'to be reworked' }
+TPRBParserTest >> testParsingPragma [
+	"Tests that the pragmas are correctly interpreted.
+	 1. The string to be parsed.
+	 2. The selector in parsed pragma.
+	 3. The selector arguments."
 	| tree node |
 	#(('foo <foo>' 				#foo ()) 
 	('foo <foo: 1>' 				#foo: (1)) 
@@ -709,34 +766,95 @@ TPRBParserTest >> testPragmas [
 			self assert: (node arguments at: i) value equals: (each last at: i) ].
 		self assert: (each first at: node start) equals: $<.
 		self assert: (each first at: node stop) equals: $> ].
+]
+
+{ #category : #'to be reworked' }
+TPRBParserTest >> testPositions [
+	| blockNode |
+	blockNode := self parserClass parseExpression: '[:a :b | ]'.
+	self assert: blockNode left equals: 1.
+	self assert: blockNode right equals: 10.
+	self assert: blockNode bar equals: 8.
+	self assert: blockNode sourceInterval equals: (1 to: 10).
+	self assert: blockNode size equals: 1.	"test dummy collection protocol"
+	blockNode printString.	"coverage"
+	self deny: (blockNode isLast: (TPRBVariableNode named: 'b')).
+	self
+		compare: blockNode
+		to:
+			(TPRBBlockNode
+				arguments: (OrderedCollection with: (TPRBVariableNode named: 'a') with: (TPRBVariableNode named: 'b'))
+				body: (TPRBSequenceNode statements: OrderedCollection new))
+]
+
+{ #category : #'error testing' }
+TPRBParserTest >> testPragmaConstantLiteralArgument [
+	| primitiveDeclartion validPragma invalidPragma |
+	"primitive declarations with variable (code) are allowed"
+	primitiveDeclartion := 'foo <primitive: #dooo module: #bar error: code> ^ nil'.
+	"#Point as argument is allowed"
+	validPragma := 'foo <return: #Point> ^ 0@0'.
+	"Point as argument is not allowed"
+	invalidPragma := 'foo <return: Point> ^ 0@0'.
+	self shouldnt:[self parserClass parseMethod: primitiveDeclartion] raise: SyntaxErrorNotification.
+	self shouldnt:[self parserClass 	parseMethod: validPragma] raise: SyntaxErrorNotification.
+	self should:[self parserClass parseMethod: invalidPragma] raise: SyntaxErrorNotification.
 	
-	self assert: (self parserClass parseMethod: 'selector <a>') isMethod.
-	self assert: (self parserClass parseMethod: '
-	selector 
-		"comment1" 
-		|temp| 
-		"comment2" 
-		<a> 
-		#<.
-		^1') isMethod.
-	self should: [self parserClass parseMethod: '
-	selector 
-		"comment1" 
-		|temp| 
-		"comment2" 
-		<a> 
-		<.
-		^1'] raise: SyntaxErrorNotification
+
 ]
 
-{ #category : #'tests parsing' }
-TPRBParserTest >> testPrimitives [
-	self assert: (Object parseTreeFor: #basicAt:) isPrimitive.
-	#(('foo ^true' false ) ('foo <some: #tag> ^true' false ) (' foo <some: #tag> <primitive: 123> ^true' true ) ) 
-			do: [:each | self assert: (self parserClass parseMethod: each first) isPrimitive equals: each last]
+{ #category : #'error testing' }
+TPRBParserTest >> testPragmaImplicitLiteralArrayIsInvalid [
+	| pragmaWithExpressionAsArgument pragmaWithLiteralArrayAsArgument pragmaWithStringAsArgument |
+	"a pragma with arguments that look like code
+	(3+4) were implicitly converted to a literal array
+	#(3+4), this is not allowed anymore"
+	pragmaWithExpressionAsArgument := 'foo 
+	<func: (3+4) res: 7>
+	^ self'.
+	self should:[self parserClass parseMethod: pragmaWithExpressionAsArgument] raise: SyntaxErrorNotification.
+
+	"an explicit literal array is allowed"
+	pragmaWithLiteralArrayAsArgument := 'foo 
+	<func: #(3+4) res: 7>
+	^ self'.
+	"Should work"
+	self shouldnt: [self parserClass parseMethod: pragmaWithLiteralArrayAsArgument] raise: SyntaxErrorNotification.
+
+	"and of course a string literal"
+	pragmaWithStringAsArgument := 'foo 
+	<func: ''(3+4)'' res: 7>
+	^ self'.
+	"should work"
+	self shouldnt: [self parserClass parseMethod: pragmaWithStringAsArgument] raise: SyntaxErrorNotification.
+
 ]
 
-{ #category : #tests }
+{ #category : #'error testing' }
+TPRBParserTest >> testPragmaInExpressionRaiseError [
+	"Test if a working pragma in a method is faulty in an expression."
+	self should: [(self parserClass parseExpression: '| token | <some: #tag> true')] 
+		  raise: SyntaxErrorNotification.
+		
+	self shouldnt: [(self parserClass parseExpression: '| token | true')] 
+		  raise: SyntaxErrorNotification.
+]
+
+{ #category : #'error testing' }
+TPRBParserTest >> testPragmaPrimitiveError [
+	| tree  pragma |
+	tree := self parserClass 
+				parseMethod: 'veryBasicAt: index 
+	<primitive: #dooo module: #bar error: code>
+	^ code'.
+	
+	self assert: tree pragmas size equals: 1.
+	
+	pragma := tree pragmas first.
+	self assert: pragma selector equals: #primitive:module:error:
+]
+
+{ #category : #'to be reworked' }
 TPRBParserTest >> testQuerying [
 	| tree aNode arg1Node bNode |
 	tree := self parserClass
@@ -766,7 +884,7 @@ TPRBParserTest >> testQuerying [
 	self assert: tree allTemporaryVariables asSortedCollection asArray equals: #('b')
 ]
 
-{ #category : #tests }
+{ #category : #'to be reworked' }
 TPRBParserTest >> testQueryingPrimitiveErrorVar [
 	| tree |
 	tree := self parserClass 
@@ -785,16 +903,14 @@ TPRBParserTest >> testQueryingPrimitiveErrorVar [
 
 ]
 
-{ #category : #'tests parsing' }
-TPRBParserTest >> testStatements [
-	| tree |
-	#(('' 0 0) ('.' 0 1) ('| bar |' 0 0) ('| bar | .' 0 1) ('| bar | ..' 0 2) ('foo. bar' 2 1) ('foo. bar.' 2 2) ('foo. bar. .' 2 3) ('. foo. bar' 2 2)) do: [ :each |
-		tree := self parserClass parseExpression: each first.
-		self assert: tree statements size equals: each second.
-		self assert: tree periods size equals: each last ]
+{ #category : #testCascade }
+TPRBParserTest >> testSemiColonAfterMessageIsCascade [
+	self assert: (self parserClass parseExpression: ' self msg; yourself') isCascade.
+	self assert: (self parserClass parseExpression: ' self msg:(arg msg:arg); yourself') isCascade.
+	self assert: (self parserClass parseExpression: ' self msg: arg msga:arga ; ibm ; yourself') isCascade.
 ]
 
-{ #category : #'tests parsing' }
+{ #category : #'to be reworked' }
 TPRBParserTest >> testString [
 	self assert: (self parserClass parseMethod: 'selector ^ ''<''') isMethod.
 	self assert: (self parserClass parseMethod: 'selector ^ ''<'', self') isMethod.
@@ -805,8 +921,9 @@ TPRBParserTest >> testString [
 	self assert: (self parserClass parseMethod: 'selector ^ ''<>''') isMethod.
 ]
 
-{ #category : #'tests parsing' }
-TPRBParserTest >> testSymbolLiteral [
+{ #category : #testLiteral }
+TPRBParserTest >> testSymbolLiteralSuccessfullyCreateLiteralNode [
+	"Test if the parsing of the strings gives a literal node corresponding to its' pair."
 	| tree |
 	#(
 	'#<' #<
@@ -820,20 +937,10 @@ TPRBParserTest >> testSymbolLiteral [
 	'#foo::bar:' #'foo::bar:'
 	'#foo::bar::' #'foo::bar::') pairsDo: [ :parseString :expectedResult |
 		tree := self parserClass parseExpression: parseString.
+		self assert: tree isLiteralNode.
 		self assert: tree value equals: expectedResult.		
 		self assert: tree start equals: 1.
 		self assert: tree stop equals: parseString size ].
-	
-	#(
-	('#"bar"foo' #foo)
-	('# foo' #foo)
-	('#1' 1)
-	('#12' 12)
-	('#12.3' 12.3)
-	('# 1' 1)
-	('##1' 1)
-	('#"bar"1' 1)) do: [ :pair | 
-		self should: [self parserClass parseExpression: pair first] raise: SyntaxErrorNotification ]
 ]
 
 { #category : #private }

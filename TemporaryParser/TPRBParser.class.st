@@ -268,6 +268,7 @@ TPRBParser >> parseArgs [
 
 { #category : #'private-parsing' }
 TPRBParser >> parseArray [
+	"Although an array node represents an array, it is not an Array-like object."
 	| position node |
 	position := currentToken start.
 	self step.
@@ -681,7 +682,7 @@ TPRBParser >> parseMethod: aMethodDefinitionString [
 TPRBParser >> parseNumberLiteral [
 	"Creates a literal value node from a number literal token."
 	| token |
-	self deprecated: 'Unnecessary method because it is the same as parsePrimitiveValueLiteral, both called only by parsePrimitiveLiteral' transformWith: self parsePrimitiveLiteral.
+	"self deprecated: 'Unnecessary method because it is the same as parsePrimitiveValueLiteral, both called only by parsePrimitiveLiteral' transformWith: self parsePrimitiveLiteral."
 	token := currentToken.
 	self step.
 	
@@ -800,7 +801,7 @@ TPRBParser >> parsePrimitiveObject [
 TPRBParser >> parsePrimitiveValueLiteral [
 	"Creates a literal value node from a literal token."
 	| token |
-	self deprecated: 'Unnecessary method because it is the same as parseNumberLiteral, both called only by parsePrimitiveLiteral' transformWith: self parsePrimitiveLiteral.
+	"self deprecated: 'Unnecessary method because it is the same as parseNumberLiteral, both called only by parsePrimitiveLiteral' transformWith: self parsePrimitiveLiteral."
 	token := currentToken.
 	self step.
 
