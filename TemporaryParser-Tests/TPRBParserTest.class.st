@@ -218,33 +218,49 @@ TPRBParserTest >> testCascadeWithNoMessageRaiseError [
 	self should: [ self parserClass parseExpression: ' self msg ;  ; yourself' ] raise: SyntaxErrorNotification
 ]
 
-{ #category : #'test utils' }
-TPRBParserTest >> testCopyInContext [
-	| tree |
-	self deprecated: 'This test should be in the nodes tests'.
-	tree := self treeWithEverything.
-	self compare: tree to: (tree copyInContext: Dictionary new).
-	tree := self treeWithReallyEverything.
-	self compare: tree to: (tree copyInContext: Dictionary new).
-	
-	self exampleClasses do: [ :class |
-		class selectors do: [ :each |
-			tree := class parseTreeFor: each.
-			self compare: tree to: (tree copyInContext: Dictionary new) ] ]
+{ #category : #testCreationProtocol }
+TPRBParserTest >> testCreationCascadeNodeFromExpression [
+	self compare: (self parserClass parseExpression: 'cascade firstMessage; secondMessage; lastMessage')
+		  to: (TPRBCascadeNode 
+				messages: (OrderedCollection with: (TPRBMessageNode receiver: (TPRBVariableNode named: 'cascade') 
+																					selector: #firstMessage) 
+													  with: (TPRBMessageNode receiver: (TPRBVariableNode named: 'cascade') 
+																					selector: #secondMessage)
+													  with: (TPRBMessageNode receiver: (TPRBVariableNode named: 'cascade') 
+																					selector: #lastMessage)) 
+				semicolons: (OrderedCollection with: 21 with: 37)).
 ]
 
-{ #category : #'test utils' }
-TPRBParserTest >> testCopyReproduceGivenTree [
-	| tree |
-	self deprecated: 'This test should be in the nodes tests'.
-	tree := self treeWithEverything.
-	self compare: tree to: tree copy.
-	tree := self treeWithReallyEverything.
-	self compare: tree to: tree copy.
+{ #category : #testCreationProtocol }
+TPRBParserTest >> testCreationLiteralArrayNodeWithExpression [
+	self compare: (self parserClass parseExpression: '#(literal1 literal2)')
+		  to: (TPRBLiteralArrayNode
+				startPosition: 1
+				contents: (Array with: (TPRBLiteralValueNode value: #literal1) with: (TPRBLiteralValueNode value: #literal2))
+				stopPosition: 20
+				isByteArray: false).
 ]
 
-{ #category : #'to be reworked' }
-TPRBParserTest >> testCreationProtocol [
+{ #category : #testCreationProtocol }
+TPRBParserTest >> testCreationLiteralValueNodeWithExpression [
+	self compare: (self parserClass parseExpression: '#literal')
+		  to: (TPRBLiteralValueNode
+				value: #literal
+				start: 1
+				stop: 8).
+]
+
+{ #category : #testCreationProtocol }
+TPRBParserTest >> testCreationLiteralValueNodeWithExpressionForNumber [
+	self compare: (self parserClass parseExpression: '2r10100')
+		  to: (TPRBLiteralValueNode
+				value: 20
+				start: 1
+				stop: 7).
+]
+
+{ #category : #testCreationProtocol }
+TPRBParserTest >> testCreationMessageNodeFromExpression [
 	| messageNode |
 	"Verify the good parsing of an expression."
 	self compare: (self parserClass parseExpression: 'self + 0')
@@ -252,13 +268,30 @@ TPRBParserTest >> testCreationProtocol [
 				receiver: (TPRBVariableNode named: 'self')
 				selector: #+
 				arguments: (Array with: (TPRBLiteralNode value: 0))).
-		
-	"Verify the good parsing of a method."
-	messageNode := TPRBMessageNode receiver: (TPRBVariableNode named: 'self') selector: #foo.
-	self compare: (self parserClass parseMethod: 'bar self foo; foo')
-		to: (TPRBMethodNode selector: #bar
-				body: (TPRBSequenceNode statements: (OrderedCollection 
-								with: (TPRBCascadeNode messages: (OrderedCollection with: messageNode with: messageNode)))))
+]
+
+{ #category : #testCreationProtocol }
+TPRBParserTest >> testCreationSelfNodeWithExpression [
+	self compare: (self parserClass parseExpression: 'self')
+		  to: (TPRBSelfNode new).
+]
+
+{ #category : #testCreationProtocol }
+TPRBParserTest >> testCreationSuperNodeWithExpression [
+	self compare: (self parserClass parseExpression: 'super')
+		  to: (TPRBSuperNode new).
+]
+
+{ #category : #testCreationProtocol }
+TPRBParserTest >> testCreationThisContexNodeWithExpression [
+	self compare: (self parserClass parseExpression: 'thisContext')
+		  to: (TPRBThisContextNode new).
+]
+
+{ #category : #testCreationProtocol }
+TPRBParserTest >> testCreationVariableNodeWithExpression [
+	self compare: (self parserClass parseExpression: 'variable')
+		  to: (TPRBVariableNode named: #variable start: 1).
 ]
 
 { #category : #testArray }
@@ -268,29 +301,6 @@ TPRBParserTest >> testDelimitationsOfArrayNodesAreBrackets [
 	do: [ :each |  tree := self parserClass parseExpression: each.
 						self assert: tree left equals: 1.
 						self assert: tree right equals: each size ]
-]
-
-{ #category : #'to be reworked' }
-TPRBParserTest >> testEqualToWithMapping [
-	| tree |
-	tree := self treeWithEverything.
-	self assert: (tree equalTo: tree withMapping: Dictionary new).
-	tree := self treeWithReallyEverything.
-	self assert: (tree equalTo: tree withMapping: Dictionary new).
-	
-	self exampleClasses do: [ :class |
-		class selectors do: [ :each |
-			tree := class parseTreeFor: each.
-			self assert: (tree equalTo: tree withMapping: Dictionary new) ] ]
-]
-
-{ #category : #'to be reworked' }
-TPRBParserTest >> testEquivalentExceptRenaming [
-	#(#('a 3-4' 'a 4-3' false) #('a #[3 4]' 'a #(3 4)' false) #('a variable1 ~~ "comment" variable2' 'a variable1 ~~ variable2' true) #('a variable1' 'a variable2' false) #('a [:a :b | a + b]' 'a [:b :a | a + b]' false) #('a | a b | a + b' 'a | b a | a + b' true) #('a | a | a msg1; msg2' 'a | b | b msg2; msg2' false) #('a c' 'a d' true) #('a | a b | a := b. ^b msg1' 'a | a b | b := a. ^a msg1' true) #('a | a b | a := b. ^b msg1: a' 'a | a b | b := a. ^b msg1: a' false) #('a: b b + 4' 'a: e e + 4' true) #('a: b b + 4' 'b: b b + 4' false) #('a: b b: c b + c' 'a: c b: b c + b' true) #('a: a b: b a + b' 'a: b b: a a + b' false))
-		do: [ :each | 
-			self
-				assert: ((self parserClass parseMethod: each first) equalTo: (self parserClass parseMethod: (each at: 2)) exceptForVariables: #('c'))
-				identicalTo: each last ]
 ]
 
 { #category : #'error testing' }
@@ -316,6 +326,12 @@ TPRBParserTest >> testGarbageAssignementWithMisplacedDot [
 	"The same could be made for other special characters."
 	self should: [self parserClass parseExpression: 'temp := ;1 + 2.'] raise: SyntaxErrorNotification.
 	self should: [self parserClass parseExpression: 'temp := ,1 + 2.'] raise: SyntaxErrorNotification.
+]
+
+{ #category : #'garbage tests' }
+TPRBParserTest >> testGarbageBadlyParenthesizedEndOfStatement [
+	"Should propose a closing parenthese before the end of the statement. Should also offer possibility to quickly erase it."
+	self should: [self parserClass parseExpression: '(temp := 1 + 3 .'] raise: SyntaxErrorNotification.
 ]
 
 { #category : #'garbage tests' }
@@ -355,6 +371,186 @@ TPRBParserTest >> testGarbageForgottenReceiver [
 	self should: [self parserClass parseExpression: '|temp | temp := 1 + 2. + 3'] raise: SyntaxErrorNotification.
 ]
 
+{ #category : #testIntervals }
+TPRBParserTest >> testGeneralBlockIntervalsArray [
+	"This tests that all types of nodes in a method are well made."
+	| tree str |
+	tree := (self parseExpression: '["comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node]').
+	str := '{array node}'.
+	self assert: ((tree body statements at: 4) start) equals: (tree source findString: str).
+	self assert: ((tree body statements at: 4) stop) equals: ((tree source findString: str) + (str size - 1)).
+]
+
+{ #category : #testIntervals }
+TPRBParserTest >> testGeneralBlockIntervalsAssignement [
+	"This tests that all types of nodes in a method are well made."
+	| tree str |
+	tree := (self parseExpression: '["comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node]').
+	str := 'assignement := node'.
+	self assert: ((tree body statements at: 7) start) equals: (tree source findString: str).
+	self assert: ((tree body statements at: 7) stop) equals: ((tree source findString: str) + (str size - 1)).
+]
+
+{ #category : #testIntervals }
+TPRBParserTest >> testGeneralBlockIntervalsBlock [
+	"This tests that all types of nodes in a method are well made."
+	| tree str |
+	tree := (self parseExpression: '["comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node]').
+	str := '[block node]'.
+	self assert: ((tree body statements at: 5) start) equals: (tree source findString: str).
+	self assert: ((tree body statements at: 5) stop) equals: ((tree source findString: str) + (str size - 1)).
+]
+
+{ #category : #testIntervals }
+TPRBParserTest >> testGeneralBlockIntervalsCascade [
+	"This tests that all types of nodes in a method are well made."
+	| tree str |
+	tree := (self parseExpression: '["comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node]').
+	str := 'cascade node; cascaded'.
+	self assert: ((tree body statements at: 6) start) equals: (tree source findString: str).
+	self assert: ((tree body statements at: 6) stop) equals: ((tree source findString: str) + (str size - 1)).
+]
+
+{ #category : #testIntervals }
+TPRBParserTest >> testGeneralBlockIntervalsLiteralArray [
+	"This tests that all types of nodes in a method are well made."
+	| tree str |
+	tree := (self parseExpression: '["comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node]').
+	str := '#(literal array node)'.
+	self assert: ((tree body statements at: 3) start) equals: (tree source findString: str).
+	self assert: ((tree body statements at: 3) stop) equals: ((tree source findString: str) + (str size - 1)).
+]
+
+{ #category : #testIntervals }
+TPRBParserTest >> testGeneralBlockIntervalsLiteralValue [
+	"This tests that all types of nodes in a method are well made."
+	| tree str |
+	tree := (self parseExpression: '["comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node]').
+	str := '#literalNode'.
+	self assert: ((tree body statements at: 2) start) equals: (tree source findString: str).
+	self assert: ((tree body statements at: 2) stop) equals: ((tree source findString: str) + (str size - 1)).
+]
+
+{ #category : #testIntervals }
+TPRBParserTest >> testGeneralBlockIntervalsMessage [
+	"This tests that all types of nodes in a method are well made."
+	| tree str |
+	tree := (self parseExpression: '["comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node]').
+	str := 'message node'.
+	self assert: ((tree body statements at: 1) start) equals: (tree source findString: str).
+	self assert: ((tree body statements at: 1) stop) equals: ((tree source findString: str) + (str size - 1)).
+]
+
+{ #category : #testIntervals }
+TPRBParserTest >> testGeneralBlockIntervalsReturn [
+	"This tests that all types of nodes in a method are well made."
+	| tree str |
+	tree := (self parseExpression: '["comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node]').
+	str := '^return node'.
+	self assert: ((tree body statements at: 8) start) equals: (tree source findString: str).
+	self assert: ((tree body statements at: 8) stop) equals: ((tree source findString: str) + (str size - 1)).
+]
+
+{ #category : #testIntervals }
+TPRBParserTest >> testGeneralMethodIntervalsArray [
+	"This tests that all types of nodes in a method are well made."
+	| tree str |
+	tree := (self parseMethod: 'Selector <pragmanode> "comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node').
+	str := '{array node}'.
+	self assert: ((tree body statements at: 4) start) equals: (tree source findString: str).
+	self assert: ((tree body statements at: 4) stop) equals: ((tree source findString: str) + (str size - 1)).
+]
+
+{ #category : #testIntervals }
+TPRBParserTest >> testGeneralMethodIntervalsAssignement [
+	"This tests that all types of nodes in a method are well made."
+	| tree str |
+	tree := (self parseMethod: 'Selector <pragmanode> "comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node').
+	str := 'assignement := node'.
+	self assert: ((tree body statements at: 7) start) equals: (tree source findString: str).
+	self assert: ((tree body statements at: 7) stop) equals: ((tree source findString: str) + (str size - 1)).
+]
+
+{ #category : #testIntervals }
+TPRBParserTest >> testGeneralMethodIntervalsBlock [
+	"This tests that all types of nodes in a method are well made."
+	| tree str |
+	tree := (self parseMethod: 'Selector <pragmanode> "comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node').
+	str := '[block node]'.
+	self assert: ((tree body statements at: 5) start) equals: (tree source findString: str).
+	self assert: ((tree body statements at: 5) stop) equals: ((tree source findString: str) + (str size - 1)).
+]
+
+{ #category : #testIntervals }
+TPRBParserTest >> testGeneralMethodIntervalsCascade [
+	"This tests that all types of nodes in a method are well made."
+	| tree str |
+	tree := (self parseMethod: 'Selector <pragmanode> "comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node').
+	str := 'cascade node; cascaded'.
+	self assert: ((tree body statements at: 6) start) equals: (tree source findString: str).
+	self assert: ((tree body statements at: 6) stop) equals: ((tree source findString: str) + (str size - 1)).
+]
+
+{ #category : #testIntervals }
+TPRBParserTest >> testGeneralMethodIntervalsComment [
+	"This tests that all types of nodes in a method are well made."
+	| tree str |
+	tree := (self parseMethod: 'Selector <pragmanode> "comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node').
+	str := '"comment node"'.
+	self assert: ((tree comments at: 1) start) equals: (tree source findString: str).
+	self assert: ((tree comments at: 1) stop) equals: ((tree source findString: str) + (str size - 1)).
+]
+
+{ #category : #testIntervals }
+TPRBParserTest >> testGeneralMethodIntervalsLiteralArray [
+	"This tests that all types of nodes in a method are well made."
+	| tree str |
+	tree := (self parseMethod: 'Selector <pragmanode> "comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node').
+	str := '#(literal array node)'.
+	self assert: ((tree body statements at: 3) start) equals: (tree source findString: str).
+	self assert: ((tree body statements at: 3) stop) equals: ((tree source findString: str) + (str size - 1)).
+]
+
+{ #category : #testIntervals }
+TPRBParserTest >> testGeneralMethodIntervalsLiteralValue [
+	"This tests that all types of nodes in a method are well made."
+	| tree str |
+	tree := (self parseMethod: 'Selector <pragmanode> "comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node').
+	str := '#literalNode'.
+	self assert: ((tree body statements at: 2) start) equals: (tree source findString: str).
+	self assert: ((tree body statements at: 2) stop) equals: ((tree source findString: str) + (str size - 1)).
+]
+
+{ #category : #testIntervals }
+TPRBParserTest >> testGeneralMethodIntervalsMessage [
+	"This tests that all types of nodes in a method are well made."
+	| tree str |
+	tree := (self parseMethod: 'Selector <pragmanode> "comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node').
+	str := 'message node'.
+	self assert: ((tree body statements at: 1) start) equals: (tree source findString: str).
+	self assert: ((tree body statements at: 1) stop) equals: ((tree source findString: str) + (str size - 1)).
+]
+
+{ #category : #testIntervals }
+TPRBParserTest >> testGeneralMethodIntervalsPragma [
+	"This tests that all types of nodes in a method are well made."
+	| tree str |
+	tree := (self parseMethod: 'Selector <pragmanode> "comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node').
+	str := '<pragmanode>'.
+	self assert: (tree pragmas first left) equals: (tree source findString: str).
+	self assert: (tree pragmas first right) equals: ((tree source findString: str) + (str size - 1)).
+]
+
+{ #category : #testIntervals }
+TPRBParserTest >> testGeneralMethodIntervalsReturn [
+	"This tests that all types of nodes in a method are well made."
+	| tree str |
+	tree := (self parseMethod: 'Selector <pragmanode> "comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node').
+	str := '^return node'.
+	self assert: ((tree body statements at: 8) start) equals: (tree source findString: str).
+	self assert: ((tree body statements at: 8) stop) equals: ((tree source findString: str) + (str size - 1)).
+]
+
 { #category : #testPragma }
 TPRBParserTest >> testIdentificationOfPrimitiveMethods [
 	"Verify if there is the pragma primitive in the parsed method."
@@ -379,27 +575,66 @@ TPRBParserTest >> testInvalidPragmaPosition [
 	do: [ :each | self should: [ self parserClass parseMethod: each ] raise: SyntaxErrorNotification ]
 ]
 
-{ #category : #'to be reworked' }
-TPRBParserTest >> testIsA [
-	| nodes types |
-	nodes := Bag new.
-	types := Set new.
-	#(#(#isAssignment 1) #(#isBlock 1) #(#isCascade 1) #(#isLiteralNode 2) #(#isMessage 3) #(#isMethod 1) #(#isReturn 1) #(#isSequence 2) #(#isValue 15) #(#isVariable 7) #(#isUsed 10) #(#isDirectlyUsed 9) #(#hasParentheses 1) #(#isBinary 0) #(#isPrimitive 0) #(#isImmediateNode 10) #(#isWrite 1) #(#isRead 3))
-		do: [ :each | 
-			each last timesRepeat: [ nodes add: each first ].
-			types add: each first ].
-	self treeWithEverything nodesDo: [ :each | types do: [ :sel | ((each respondsTo: sel) and: [ each perform: sel ]) ifTrue: [ nodes remove: sel ] ] ].
-	self assertEmpty: nodes
+{ #category : #'foreign use of test' }
+TPRBParserTest >> testLiteralArray [
+	"Test the good parsing of the elements of a literal array which means treating each as a literal."
+	| tree collection |
+	tree := self parserClass parseExpression: 
+			  '#( a #b #''c'' . + - 1 -2 3.4 #true true #false false #nil nil "comment" ''string'' #[ 1 2 3 ] #(1 2 3))'.
+	collection := OrderedCollection new.
+	"Create a collection with the expected values contained in the literal array."
+	collection add: #a; 
+				  add: #b; 
+				  add: #c; 
+				  add: #'.'; 
+				  add: #+; 
+				  add: #-; 
+				  add: 1; 
+				  add: -2; 
+				  add: 3.4; 
+				  add: #true; 
+				  add: true; 
+				  add: #false; 
+				  add: false; 
+				  add: #nil; 
+				  add: nil; 
+				  add: 'string'; 
+				  add: #[1 2 3]; 
+				  add: #(1 2 3).
+	self assert: tree isLiteralArray.
+	tree value with: collection do: [ :node :value | 
+		self assert: node value equals: value ]
 ]
 
-{ #category : #'to be reworked' }
-TPRBParserTest >> testLiteralArray [
+{ #category : #testArray }
+TPRBParserTest >> testLiteralArrayContainsLiteralValues [
+	"Test the good parsing of the elements of a literal array which means treating each as a literal."
 	| tree collection |
-	tree := self parserClass parseExpression: '#( a #b #''c'' . + - 1 -2 3.4 #true true #false false #nil nil "comment" ''string'' #[ 1 2 3 ] #(1 2 3))'.
+	tree := self parserClass parseExpression: 
+			  '#( a #b #''c'' . + - 1 -2 3.4 #true true #false false #nil nil "comment" ''string'' #[ 1 2 3 ] #(1 2 3))'.
 	collection := OrderedCollection new.
-	collection add: #a; add: #b; add: #c; add: #'.'; add: #+; add: #-; add: 1; add: -2; add: 3.4; add: #true; add: true; add: #false; add: false; add: #nil; add: nil; add: 'string'; add: #[1 2 3]; add: #(1 2 3).	
-	tree value with: collection do: [ :token :value | 
-		self assert: token value equals: value ]
+	"Create a collection with the expected values contained in the literal array."
+	collection add: #a; 
+				  add: #b; 
+				  add: #c; 
+				  add: #'.'; 
+				  add: #+; 
+				  add: #-; 
+				  add: 1; 
+				  add: -2; 
+				  add: 3.4; 
+				  add: #true; 
+				  add: true; 
+				  add: #false; 
+				  add: false; 
+				  add: #nil; 
+				  add: nil; 
+				  add: 'string'; 
+				  add: #[1 2 3]; 
+				  add: #(1 2 3).
+	self assert: tree isLiteralArray.
+	tree value with: collection do: [ :node :value | 
+		self assert: node value equals: value ]
 ]
 
 { #category : #testLiteral }
@@ -411,37 +646,44 @@ TPRBParserTest >> testLiteralIntevals [
 	self assert: tree contents last contents first start equals: 11
 ]
 
-{ #category : #'to be reworked' }
-TPRBParserTest >> testMatchInContext [
+{ #category : #testIntervals }
+TPRBParserTest >> testMethodNodeEndAtTheEndOfTheString [
 	| tree |
-	tree := self treeWithEverything.
-	self assert: (tree match: tree inContext: Dictionary new).
-	tree := self treeWithReallyEverything.
-	self assert: (tree match: tree inContext: Dictionary new).
+	"Expressions have an odd way of handling their stop position. The string is reformated to give a new source corresponding to the method #noMethod.
+	 It seems the method node take this new source into account instead of the original one."
+	tree := (self parserClass parseExpression: 'foo kung foo. 1+2+3. #''alabama''.  ').
+	self assert: tree parent source equals: 'foo kung foo. 1+2+3. #''alabama''.  '.
+	self assert: tree parent stop equals: tree parent newSource size.
 	
-	self exampleClasses do: [ :class |
-		class selectors do: [ :each |
-			tree := class parseTreeFor: each.
-			self assert: (tree match: tree inContext: Dictionary new) ] ]
+	tree := (self parserClass parseMethod: 'foo kung foo. 1+2+3. #''alabama''.  ').
+	self assert: tree source equals: 'foo kung foo. 1+2+3. #''alabama''.  '.
+	self assert: tree stop equals: tree newSource size.
+	
 ]
 
-{ #category : #'to be reworked' }
-TPRBParserTest >> testMethodPatterns [
-	#(#('+ a ^self + a' #+) #('foo ^self foo' #foo) #('foo: a bar: b ^a + b' #foo:bar:))
-		do: [ :each | self assert: (self parserClass parseMethodPattern: each first) identicalTo: each last ]
+{ #category : #testIntervals }
+TPRBParserTest >> testMethodNodeStartAtOne [
+	| tree |
+	"When there are multiple statements, the node returned is the Sequence node (child of the method node)."
+	tree := (self parserClass parseExpression: 'foo koong. ^foo').
+	self assert: tree parent start equals: 1.
+	
+	tree := (self parserClass parseExpression: '  foo koong. ^foo').
+	self assert: tree parent start equals: 1.
+	
+	"parseMethod always return a method node."
+	tree := (self parserClass parseMethod: 'foo koong. ^foo').
+	self assert: tree start equals: 1.
+	
+	tree := (self parserClass parseMethod: '  foo koong. ^foo').
+	self assert: tree start equals: 1.
+	
+	
 ]
 
 { #category : #'error testing' }
 TPRBParserTest >> testNegativeNumberError [
 	self should: [ self parserClass parseExpression: '- 2' ] raise: SyntaxErrorNotification
-]
-
-{ #category : #'to be reworked' }
-TPRBParserTest >> testNodesDo [
-	| size |
-	size := 0.
-	self treeWithEverything nodesDo: [ :e | size := size + 1 ].
-	self assert: size equals: 19
 ]
 
 { #category : #testNumber }
@@ -462,19 +704,37 @@ TPRBParserTest >> testNumberRadixParsing [
 		0 to: 72 do: [ :i | self assert: (self parserClass parseExpression: radixString , (i radix: radix)) value equals: i ] ]
 ]
 
-{ #category : #'to be reworked' }
-TPRBParserTest >> testParents [
-	(Array with: self treeWithEverything with: self treeWithReallyEverything)
-		do: [ :tree | 
-			(Array with: tree with: tree copy)
-				do: [ :root | 
-					root
-						nodesDo: [ :node | 
-							node children
-								do: [ :each | 
-									(each parent isMessage and: [ each parent isCascaded ])
-										ifFalse: [ self assert: each parent identicalTo: node.
-											self assert: each methodNode identicalTo: root ] ] ] ] ]
+{ #category : #testParentage }
+TPRBParserTest >> testParentOfArgumentNodeIsMethodNode [
+	| tree |
+	tree := self parseMethod: 'Selector: argument ^return something.'.
+	self assert: tree arguments first isVariable.
+	self assert: tree arguments first parent equals: tree.
+	
+]
+
+{ #category : #testParentage }
+TPRBParserTest >> testParentOfMethodNodeIsNil [
+	| tree |
+	tree := self parseMethod: 'Selector ^return something.'.
+	self assert: tree parent isNil.
+]
+
+{ #category : #testParentage }
+TPRBParserTest >> testParentOfSequenceNodeIsMethodNode [
+	| tree |
+	tree := self parseMethod: 'Selector ^return something.'.
+	self assert: tree body isSequence.
+	self assert: tree body parent equals: tree.
+	
+]
+
+{ #category : #testParentage }
+TPRBParserTest >> testParentOfStatementsIsSequenceNode [
+	| tree |
+	tree := self parseMethod: 'Selector: argument "comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node'.
+	(tree body statements) do: [ :each | self assert: each parent equals: tree body].
+	
 ]
 
 { #category : #'tests parsing' }
@@ -596,6 +856,38 @@ TPRBParserTest >> testParseFaultyPragma [
 	self assert: node pragmas first isFaulty
 ]
 
+{ #category : #'tests parsing' }
+TPRBParserTest >> testParseGivesMethod [
+	"The parsing of an expression or a method gives a method node.
+	 For an expression we expect the selector to be #noMethod.
+	 For a method we expect the selector to be the first identifier.
+	 In the method node, we expect the original string (source) to be stored."
+	| tree |
+	"When there are multiple statements, the node returned is the Sequence node (child of the method node)."
+	tree := (self parserClass parseExpression: 'foo koong. ^foo').
+	self assert: tree parent isMethod.
+	
+	"When there is a single statement, the node returned is the overarching node of the statement (child of the sequence node)."
+	tree := (self parserClass parseExpression: 'foo koong foo').
+	self assert: tree parent parent isMethod.
+	
+	"parseMethod always return a method node."
+	tree := (self parserClass parseMethod: 'foo koong. ^foo').
+	self assert: tree isMethod.
+	
+	tree := (self parserClass parseMethod: 'foo koong foo').
+	self assert: tree isMethod.
+]
+
+{ #category : #testPattern }
+TPRBParserTest >> testParseMethodPatternGivesSelector [
+	#(#('+ a ^self + a' 				#+) 
+	  #('foo ^self foo' 				#foo)
+	  #('foo: a b ^self foo: b'    #foo:) 
+	  #('foo: a bar: b ^a + b' 		#foo:bar:))
+		do: [ :each | self assert: (self parserClass parseMethodPattern: each first) identicalTo: each last ]
+]
+
 { #category : #'to be reworked' }
 TPRBParserTest >> testParseMethodWhichEndsWithUncompleteStringWithEscapedMarkAtTheEnd [
 	| node strangeMethod body statement message errorNode |
@@ -665,6 +957,29 @@ TPRBParserTest >> testParseMethodWithErrorTokenIsWellFormed [
 			'wrong because no end.
 		^temp'.
 	self assert: errorNode errorMessage equals: 'Unmatched '' in string literal.' translated
+]
+
+{ #category : #'tests parsing' }
+TPRBParserTest >> testParseRegistersTheSourceInMethodNode [
+	"The parsing of an expression or a method gives a method node.
+	 For an expression we expect the selector to be #noMethod.
+	 For a method we expect the selector to be the first identifier.
+	 In the method node, we expect the original string (source) to be stored."
+	| tree |
+	"When there are multiple statements, the node returned is the Sequence node (child of the method node)."
+	tree := (self parserClass parseExpression: 'foo koong. ^foo').
+	self assert: tree parent source equals: 'foo koong. ^foo'.
+	
+	"When there is a single statement, the node returned is the overarching node of the statement (child of the sequence node)."
+	tree := (self parserClass parseExpression: 'foo koong foo').
+	self assert: tree parent parent source equals: 'foo koong foo'.
+	
+	"parseMethod always return a method node."
+	tree := (self parserClass parseMethod: 'foo koong. ^foo').
+	self assert: tree source equals: 'foo koong. ^foo'.
+	
+	tree := (self parserClass parseMethod: 'foo koong foo').
+	self assert: tree source equals: 'foo koong foo'.
 ]
 
 { #category : #'tests parsing faulty' }
@@ -908,6 +1223,43 @@ TPRBParserTest >> testSemiColonAfterMessageIsCascade [
 	self assert: (self parserClass parseExpression: ' self msg; yourself') isCascade.
 	self assert: (self parserClass parseExpression: ' self msg:(arg msg:arg); yourself') isCascade.
 	self assert: (self parserClass parseExpression: ' self msg: arg msga:arga ; ibm ; yourself') isCascade.
+]
+
+{ #category : #testIntervals }
+TPRBParserTest >> testSequenceNodeEndAtTheEndOfTheString [
+	| tree |
+
+	tree := (self parserClass parseExpression: 'foo kung foo. 1+2+3. #''alabama''.').
+	self assert: tree source equals: 'foo kung foo. 1+2+3. #''alabama''.'.
+	self assert: tree stop equals: tree parent source size.
+	
+	tree := (self parserClass parseMethod: 'foo kung foo. 1+2+3. #''alabama''.').
+	self assert: tree source equals: 'foo kung foo. 1+2+3. #''alabama''.'.
+	self assert: tree body stop equals: tree source size.
+	
+]
+
+{ #category : #testIntervals }
+TPRBParserTest >> testSequenceNodeStartAtFirstTokenAfterTheSelector [
+	"Beginning spaces are trimmed before the start of sequence node."
+	| tree |
+	"Here, the selector is the implicit #noMethod"
+	tree := (self parserClass parseExpression: 'foo koong. ^foo').
+	self assert: tree start equals: 1.
+	
+	"There are 2 spaces before foo."
+	tree := (self parserClass parseExpression: '  foo koong. ^foo').
+	self assert: tree start equals: 3.
+	
+	"Here, foo is the method selector so the sequence start at koong."
+	tree := (self parserClass parseMethod: 'foo koong. ^foo').
+	self assert: tree body start equals: 5.
+	
+	"There are 2 spaces before foo."
+	tree := (self parserClass parseMethod: '  foo koong. ^foo').
+	self assert: tree body start equals: 7.
+	
+	
 ]
 
 { #category : #'to be reworked' }
