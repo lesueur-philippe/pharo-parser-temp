@@ -538,7 +538,6 @@ TPRBParser >> parseKeywordPattern [
 
 { #category : #'private-parsing' }
 TPRBParser >> parseKeywordPragma [
-	""
 	| selector positions arguments |
 	selector := ''.
 	positions := OrderedCollection new: 2.
@@ -711,7 +710,6 @@ TPRBParser >> parseParenthesizedExpression [
 { #category : #'private-parsing' }
 TPRBParser >> parsePragma [
 	"Method called by parsePragmas which already verified that current token is the special character <"
-	
 	| start pragma |
 	start := currentToken start.
 	self step.
