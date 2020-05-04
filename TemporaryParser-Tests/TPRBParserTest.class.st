@@ -219,6 +219,15 @@ TPRBParserTest >> testCascadeWithNoMessageRaiseError [
 ]
 
 { #category : #testCreationProtocol }
+TPRBParserTest >> testCreationBlockNodeWithExpression [
+	self compare: (self parserClass parseExpression: '[:a :b | a messaged. b messaged.]') 
+		  to:(TPRBBlockNode
+			   arguments: (OrderedCollection with: (TPRBVariableNode named: 'a') with: (TPRBVariableNode named: 'b'))
+				body: (TPRBSequenceNode statements: (OrderedCollection with: (TPRBMessageNode receiver: (TPRBVariableNode named: #a) selector: #messaged) 
+																						with: (TPRBMessageNode receiver: (TPRBVariableNode named: #b) selector: #messaged)))).
+]
+
+{ #category : #testCreationProtocol }
 TPRBParserTest >> testCreationCascadeNodeFromExpression [
 	self compare: (self parserClass parseExpression: 'cascade firstMessage; secondMessage; lastMessage')
 		  to: (TPRBCascadeNode 
@@ -341,6 +350,41 @@ TPRBParserTest >> testGarbageEncouteringEndOfStatement [
 ]
 
 { #category : #'garbage tests' }
+TPRBParserTest >> testGarbageFaultyCascadeGivesMultipleErrorAndNoMassage [
+	| tree |
+	tree := self parseFaultyExpression: 'faulty cascade; 1; node'.
+	self assert: tree isSequence.
+	self assert: tree statements size equals: 2.
+	
+	"The first node is meant to be a cascade but the failure prevent from having a cascade node which means having an error 
+	 node instead. This has some repercutions : their is no cascade message and the name of the parents are wrong."
+	self assert: tree statements first isFaulty.
+	self assert: tree statements first errorMessage equals: 'Message expected'.
+	
+	self assert: tree statements last isFaulty.
+	self assert: tree statements last errorMessage equals: 'End of statement list encountered'.
+	
+	self assert: tree parent printString equals: 'noMethod
+  1; node.
+  1; node'.
+	
+	"The problem is further enlightenned with longer cascades."
+	tree := self parseFaultyExpression: 'faulty cascade; successful; until; not; 1; node'.
+	self assert: tree isSequence.
+	self assert: tree statements size equals: 2.
+	
+	self assert: tree statements first isFaulty.
+	self assert: tree statements first errorMessage equals: 'Message expected'.
+	
+	self assert: tree statements last isFaulty.
+	self assert: tree statements last errorMessage equals: 'End of statement list encountered'.
+	
+	self assert: tree parent printString equals: 'noMethod
+  1; node.
+  1; node'.
+]
+
+{ #category : #'garbage tests' }
 TPRBParserTest >> testGarbageForgottenDotAfterAssignement [
 	| tree child error |
 	self shouldnt: [self parserClass parseExpression: '|temp | temp := 1 + 2 temp + 3'] raise: SyntaxErrorNotification.
@@ -373,7 +417,7 @@ TPRBParserTest >> testGarbageForgottenReceiver [
 
 { #category : #testIntervals }
 TPRBParserTest >> testGeneralBlockIntervalsArray [
-	"This tests that all types of nodes in a method are well made."
+	"This tests that array nodes inside a block node correspond the right interval in the source code."
 	| tree str |
 	tree := (self parseExpression: '["comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node]').
 	str := '{array node}'.
@@ -383,7 +427,7 @@ TPRBParserTest >> testGeneralBlockIntervalsArray [
 
 { #category : #testIntervals }
 TPRBParserTest >> testGeneralBlockIntervalsAssignement [
-	"This tests that all types of nodes in a method are well made."
+	"This tests that assignement nodes inside a block node correspond the right interval in the source code."
 	| tree str |
 	tree := (self parseExpression: '["comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node]').
 	str := 'assignement := node'.
@@ -393,7 +437,7 @@ TPRBParserTest >> testGeneralBlockIntervalsAssignement [
 
 { #category : #testIntervals }
 TPRBParserTest >> testGeneralBlockIntervalsBlock [
-	"This tests that all types of nodes in a method are well made."
+	"This tests that block nodes inside a block node correspond the right interval in the source code."
 	| tree str |
 	tree := (self parseExpression: '["comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node]').
 	str := '[block node]'.
@@ -403,7 +447,7 @@ TPRBParserTest >> testGeneralBlockIntervalsBlock [
 
 { #category : #testIntervals }
 TPRBParserTest >> testGeneralBlockIntervalsCascade [
-	"This tests that all types of nodes in a method are well made."
+	"This tests that cascade nodes inside a block node correspond the right interval in the source code."
 	| tree str |
 	tree := (self parseExpression: '["comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node]').
 	str := 'cascade node; cascaded'.
@@ -413,7 +457,7 @@ TPRBParserTest >> testGeneralBlockIntervalsCascade [
 
 { #category : #testIntervals }
 TPRBParserTest >> testGeneralBlockIntervalsLiteralArray [
-	"This tests that all types of nodes in a method are well made."
+	"This tests that literal array nodes inside a block node correspond the right interval in the source code."
 	| tree str |
 	tree := (self parseExpression: '["comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node]').
 	str := '#(literal array node)'.
@@ -423,7 +467,7 @@ TPRBParserTest >> testGeneralBlockIntervalsLiteralArray [
 
 { #category : #testIntervals }
 TPRBParserTest >> testGeneralBlockIntervalsLiteralValue [
-	"This tests that all types of nodes in a method are well made."
+	"This tests that literal value nodes inside a block node correspond the right interval in the source code."
 	| tree str |
 	tree := (self parseExpression: '["comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node]').
 	str := '#literalNode'.
@@ -433,7 +477,7 @@ TPRBParserTest >> testGeneralBlockIntervalsLiteralValue [
 
 { #category : #testIntervals }
 TPRBParserTest >> testGeneralBlockIntervalsMessage [
-	"This tests that all types of nodes in a method are well made."
+	"This tests that message nodes inside a block node correspond the right interval in the source code."
 	| tree str |
 	tree := (self parseExpression: '["comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node]').
 	str := 'message node'.
@@ -443,7 +487,7 @@ TPRBParserTest >> testGeneralBlockIntervalsMessage [
 
 { #category : #testIntervals }
 TPRBParserTest >> testGeneralBlockIntervalsReturn [
-	"This tests that all types of nodes in a method are well made."
+	"This tests that return nodes inside a block node correspond the right interval in the source code."
 	| tree str |
 	tree := (self parseExpression: '["comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node]').
 	str := '^return node'.
@@ -453,7 +497,7 @@ TPRBParserTest >> testGeneralBlockIntervalsReturn [
 
 { #category : #testIntervals }
 TPRBParserTest >> testGeneralMethodIntervalsArray [
-	"This tests that all types of nodes in a method are well made."
+	"This tests that array nodes inside a method node correspond the right interval in the source code."
 	| tree str |
 	tree := (self parseMethod: 'Selector <pragmanode> "comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node').
 	str := '{array node}'.
@@ -463,7 +507,7 @@ TPRBParserTest >> testGeneralMethodIntervalsArray [
 
 { #category : #testIntervals }
 TPRBParserTest >> testGeneralMethodIntervalsAssignement [
-	"This tests that all types of nodes in a method are well made."
+	"This tests that assignement nodes inside a method node correspond the right interval in the source code."
 	| tree str |
 	tree := (self parseMethod: 'Selector <pragmanode> "comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node').
 	str := 'assignement := node'.
@@ -473,7 +517,7 @@ TPRBParserTest >> testGeneralMethodIntervalsAssignement [
 
 { #category : #testIntervals }
 TPRBParserTest >> testGeneralMethodIntervalsBlock [
-	"This tests that all types of nodes in a method are well made."
+	"This tests that block nodes inside a method node correspond the right interval in the source code."
 	| tree str |
 	tree := (self parseMethod: 'Selector <pragmanode> "comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node').
 	str := '[block node]'.
@@ -483,7 +527,7 @@ TPRBParserTest >> testGeneralMethodIntervalsBlock [
 
 { #category : #testIntervals }
 TPRBParserTest >> testGeneralMethodIntervalsCascade [
-	"This tests that all types of nodes in a method are well made."
+	"This tests that cascade nodes inside a method node correspond the right interval in the source code."
 	| tree str |
 	tree := (self parseMethod: 'Selector <pragmanode> "comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node').
 	str := 'cascade node; cascaded'.
@@ -493,7 +537,7 @@ TPRBParserTest >> testGeneralMethodIntervalsCascade [
 
 { #category : #testIntervals }
 TPRBParserTest >> testGeneralMethodIntervalsComment [
-	"This tests that all types of nodes in a method are well made."
+	"This tests that comment nodes inside a method node correspond the right interval in the source code."
 	| tree str |
 	tree := (self parseMethod: 'Selector <pragmanode> "comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node').
 	str := '"comment node"'.
@@ -503,7 +547,7 @@ TPRBParserTest >> testGeneralMethodIntervalsComment [
 
 { #category : #testIntervals }
 TPRBParserTest >> testGeneralMethodIntervalsLiteralArray [
-	"This tests that all types of nodes in a method are well made."
+	"This tests that literal array nodes inside a method node correspond the right interval in the source code."
 	| tree str |
 	tree := (self parseMethod: 'Selector <pragmanode> "comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node').
 	str := '#(literal array node)'.
@@ -513,7 +557,7 @@ TPRBParserTest >> testGeneralMethodIntervalsLiteralArray [
 
 { #category : #testIntervals }
 TPRBParserTest >> testGeneralMethodIntervalsLiteralValue [
-	"This tests that all types of nodes in a method are well made."
+	"This tests that literal value nodes inside a method node correspond the right interval in the source code."
 	| tree str |
 	tree := (self parseMethod: 'Selector <pragmanode> "comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node').
 	str := '#literalNode'.
@@ -523,7 +567,7 @@ TPRBParserTest >> testGeneralMethodIntervalsLiteralValue [
 
 { #category : #testIntervals }
 TPRBParserTest >> testGeneralMethodIntervalsMessage [
-	"This tests that all types of nodes in a method are well made."
+	"This tests that message nodes inside a method node correspond the right interval in the source code."
 	| tree str |
 	tree := (self parseMethod: 'Selector <pragmanode> "comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node').
 	str := 'message node'.
@@ -533,7 +577,7 @@ TPRBParserTest >> testGeneralMethodIntervalsMessage [
 
 { #category : #testIntervals }
 TPRBParserTest >> testGeneralMethodIntervalsPragma [
-	"This tests that all types of nodes in a method are well made."
+	"This tests that pragma nodes inside a method node correspond the right interval in the source code."
 	| tree str |
 	tree := (self parseMethod: 'Selector <pragmanode> "comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node').
 	str := '<pragmanode>'.
@@ -543,7 +587,7 @@ TPRBParserTest >> testGeneralMethodIntervalsPragma [
 
 { #category : #testIntervals }
 TPRBParserTest >> testGeneralMethodIntervalsReturn [
-	"This tests that all types of nodes in a method are well made."
+	"This tests that return nodes inside a method node correspond the right interval in the source code."
 	| tree str |
 	tree := (self parseMethod: 'Selector <pragmanode> "comment node" | temporaries | message node. #literalNode . #(literal array node). {array node}. [block node]. cascade node; cascaded. assignement := node. ^return node').
 	str := '^return node'.
@@ -888,7 +932,7 @@ TPRBParserTest >> testParseMethodPatternGivesSelector [
 		do: [ :each | self assert: (self parserClass parseMethodPattern: each first) identicalTo: each last ]
 ]
 
-{ #category : #'to be reworked' }
+{ #category : #testCreationProtocol }
 TPRBParserTest >> testParseMethodWhichEndsWithUncompleteStringWithEscapedMarkAtTheEnd [
 	| node strangeMethod body statement message errorNode |
 	strangeMethod := '
@@ -922,7 +966,7 @@ TPRBParserTest >> testParseMethodWhichEndsWithUncompleteStringWithEscapedMarkAtT
 	self assert: errorNode errorMessage equals: 'Unmatched '' in string literal.' translated
 ]
 
-{ #category : #'to be reworked' }
+{ #category : #testCreationProtocol }
 TPRBParserTest >> testParseMethodWithErrorTokenIsWellFormed [
 	| node strangeMethod body statement message errorNode |
 	strangeMethod := '
@@ -1037,20 +1081,37 @@ TPRBParserTest >> testParsingArrayGivesArrayNode [
 		self assert: tree isDynamicArray.]
 ]
 
-{ #category : #'to be reworked' }
-TPRBParserTest >> testParsingLiteralMessages [
-	self assert: (self parserClass parseExpression: 'nil self nil') isMessage.
-	self assert: (self parserClass parseExpression: 'self true') isMessage.
-	self assert: (self parserClass parseExpression: 'self false') isMessage.
-	self assert: (self parserClass parseExpression: 'self -1') isMessage.
+{ #category : #testPragma }
+TPRBParserTest >> testParsingPragmaRecogniseAndStorePragmas [
+	"Tests that the pragmas are correctly interpreted.
+	 1. The string to be parsed.
+	 2. The selector in parsed pragma.
+	 3. The selector arguments."
+	| tree |
+	#('foo <foo>' 				
+	'foo <foo: 1>' 			
+	'foo <foo: 1.2>' 		
+	'foo <foo: -3>' 	
+	'foo <foo: #a>' 	
+	'foo <foo: #< >' 
+	'foo <foo: #> >' 
+	'foo <foo: $a>'
+	'foo <foo: ''bar''>'
+	'foo <foo: true>' 	
+	'foo <foo: false>' 
+	'foo <foo: nil>' 	
+	'foo <foo: #(1 2)>' 
+	'foo <foo: 1 bar: 2>' 
+	'foo |t| <foo: 1.2>'
+	'foo |t| <foo: 1 bar: 2>' ) do: [ :each |
+		tree := self parserClass parseMethod: each.
+		self assert: tree pragmas size equals: 1.].
 	
-	self assert: (self parserClass parseMethod: 'nil') isMethod.
-	self assert: (self parserClass parseMethod: 'true') isMethod.
-	self assert: (self parserClass parseMethod: 'false') isMethod
+	self assert: (self parserClass parseMethod: 'foo |t| <pragma1> <pragma2>') pragmas size equals: 2.
 ]
 
-{ #category : #'to be reworked' }
-TPRBParserTest >> testParsingPragma [
+{ #category : #testPragma }
+TPRBParserTest >> testParsingPragmaRecogniseArguments [
 	"Tests that the pragmas are correctly interpreted.
 	 1. The string to be parsed.
 	 2. The selector in parsed pragma.
@@ -1076,11 +1137,37 @@ TPRBParserTest >> testParsingPragma [
 		tree := self parserClass parseMethod: each first.
 		self assert: tree pragmas size equals: 1.
 		node := tree pragmas first.
-		self assert: node selector equals: each second.
 		1 to: node arguments size do: [ :i |
-			self assert: (node arguments at: i) value equals: (each last at: i) ].
-		self assert: (each first at: node start) equals: $<.
-		self assert: (each first at: node stop) equals: $> ].
+			self assert: (node arguments at: i) value equals: (each last at: i) ].]
+]
+
+{ #category : #testPragma }
+TPRBParserTest >> testParsingPragmaRecogniseSelector [
+	"Tests that the pragmas are correctly interpreted.
+	 1. The string to be parsed.
+	 2. The selector in parsed pragma.
+	 3. The selector arguments."
+	| tree node |
+	#(('foo <foo>' 				#foo ()) 
+	('foo <foo: 1>' 				#foo: (1)) 
+	('foo <foo: 1.2>' 			#foo: (1.2)) 
+	('foo <foo: -3>' 			#foo: (-3)) 
+	('foo <foo: #a>' 			#foo: (a)) 
+	('foo <foo: #< >' 			#foo: (<)) 
+	('foo <foo: #> >' 			#foo: (>)) 
+	('foo <foo: $a>' 			#foo: ($a)) 
+	('foo <foo: ''bar''>' 		#foo: ('bar')) 
+	('foo <foo: true>' 			#foo: (true)) 
+	('foo <foo: false>' 			#foo: (false)) 
+	('foo <foo: nil>' 			#foo: (nil)) 
+	('foo <foo: #(1 2)>' 		#foo: ((1 2)))
+	('foo <foo: 1 bar: 2>' 		#foo:bar: (1 2))
+	('foo |t| <foo: 1.2>' 		#foo: (1.2))
+	('foo |t| <foo: 1 bar: 2>' #foo:bar: (1 2))
+	) do: [ :each |
+		tree := self parserClass parseMethod: each first.
+		node := tree pragmas first.
+		self assert: node selector equals: each second.]
 ]
 
 { #category : #'to be reworked' }
@@ -1094,12 +1181,6 @@ TPRBParserTest >> testPositions [
 	self assert: blockNode size equals: 1.	"test dummy collection protocol"
 	blockNode printString.	"coverage"
 	self deny: (blockNode isLast: (TPRBVariableNode named: 'b')).
-	self
-		compare: blockNode
-		to:
-			(TPRBBlockNode
-				arguments: (OrderedCollection with: (TPRBVariableNode named: 'a') with: (TPRBVariableNode named: 'b'))
-				body: (TPRBSequenceNode statements: OrderedCollection new))
 ]
 
 { #category : #'error testing' }
@@ -1262,7 +1343,7 @@ TPRBParserTest >> testSequenceNodeStartAtFirstTokenAfterTheSelector [
 	
 ]
 
-{ #category : #'to be reworked' }
+{ #category : #'foreign use of test' }
 TPRBParserTest >> testString [
 	self assert: (self parserClass parseMethod: 'selector ^ ''<''') isMethod.
 	self assert: (self parserClass parseMethod: 'selector ^ ''<'', self') isMethod.
