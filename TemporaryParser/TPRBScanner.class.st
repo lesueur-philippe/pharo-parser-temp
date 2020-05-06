@@ -372,6 +372,7 @@ TPRBScanner >> scanError: theCause [
 
 { #category : #'private-scanning' }
 TPRBScanner >> scanIdentifierOrKeyword [
+	"!! Attention !! There are 3 case of Literal Tokens : true, false and nil."
 	"This scan accepts keywords only containing a colon."
 	"The presence of a colon will mark the creation of a keyword, except when followed with =.
 	 Otherwise an Identifier is created."

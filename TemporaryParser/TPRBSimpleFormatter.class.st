@@ -411,12 +411,13 @@ TPRBSimpleFormatter >> visitCascadeNode: aCascadeNode [
 	self
 		indentAround: [ self newLine.
 			aCascadeNode messages
-				do: [ :each | 
+				do: [ :each | each isFaulty ifFalse: [ 
 					self
 						indentAround: [ self
 								formatSelectorAndArguments: each
 								firstSeparator: [  ]
 								restSeparator: [ self space ] ] ]
+					 ifTrue: [ self visitParseErrorNode: each ] ]
 				separatedBy: [ codeStream nextPut: $;.
 					self newLine ] ]
 ]
