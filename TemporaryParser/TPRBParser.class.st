@@ -969,6 +969,7 @@ TPRBParser >> parserError: aString [
 	currentToken isError 
 		ifTrue: [ errorMessage := currentToken cause. errorPosition := currentToken location ] 
 		ifFalse: [errorMessage := aString. errorPosition := currentToken start].
+
 	newSource := SyntaxErrorNotification
 						inClass: Object
 						withCode: source

@@ -635,7 +635,6 @@ TPRBScannerTest >> testNextLiteralBeginningWithUnknownThrowsError [
 	self assert: token value equals: '`'.
 	self assert: token cause equals: 'Expecting a literal type'.
 ]
-
 { #category : #testLiteral }
 TPRBScannerTest >> testNextLiteralCanBeBinary [
 	| scanner token |

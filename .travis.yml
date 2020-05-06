@@ -1,0 +1,5 @@
+language: smalltalk
+sudo: false
+
+smalltalk:
+  - Pharo64-8.0

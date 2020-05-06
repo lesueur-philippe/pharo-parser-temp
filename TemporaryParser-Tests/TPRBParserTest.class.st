@@ -709,6 +709,7 @@ TPRBParserTest >> testIdentificationOfPrimitiveMethods [
 ]
 
 { #category : #'error testing' }
+
 TPRBParserTest >> testInvalidPragmaPosition [
 	#(
 	'foo self. <foo: $a>'
