@@ -163,6 +163,7 @@ TPRBParser >> atEnd [
 
 { #category : #'private-parsing' }
 TPRBParser >> basicParsePragma [
+	"Current token must be Identifier, Keyword or Binary. Else it throws an error."
 	^ currentToken isIdentifier
 		ifTrue: [ self parseUnaryPragma ]
 		ifFalse: [
@@ -258,6 +259,7 @@ TPRBParser >> nextToken [
 
 { #category : #'private-parsing' }
 TPRBParser >> parseArgs [
+	"Return a collection of variable node."
 	| args |
 	args := OrderedCollection new.
 	[currentToken isIdentifier] whileTrue: [args add: self parseVariableNode].
@@ -266,6 +268,7 @@ TPRBParser >> parseArgs [
 
 { #category : #'private-parsing' }
 TPRBParser >> parseArray [
+	"Although an array node represents an array, it is not an Array-like object."
 	| position node |
 	position := currentToken start.
 	self step.
@@ -539,6 +542,7 @@ TPRBParser >> parseKeywordPragma [
 	selector := ''.
 	positions := OrderedCollection new: 2.
 	arguments := OrderedCollection new: 2.
+	"While it encounters keywords, concatenate them in a string."
 	[ currentToken isKeyword ] whileTrue: [
 		selector := selector, currentToken value.
 		positions add: currentToken start.
@@ -588,11 +592,14 @@ TPRBParser >> parseLiteralArrayObject [
 
 { #category : #'private-parsing' }
 TPRBParser >> parseLiteralByteArray [
+	"Current token is litteral array token #[ which means following tokens are part of the array 
+	 until the encounter of the special character ] ."
 	| stream start stop |
 	start := currentToken start.
 	stream := (Array new: 5) writeStream.
 	self step.
 	[self atEnd or: [currentToken isSpecial and: [currentToken value = $]]]] 
+		"Put literal value nodes corresponding to the bytes in the stream."
 		whileFalse: [stream nextPut: self parseLiteralByteArrayObject].
 	(currentToken isSpecial and: [currentToken value = $]]) 
 		ifFalse: [^ self parserError: ''']'' expected'].
@@ -607,6 +614,8 @@ TPRBParser >> parseLiteralByteArray [
 
 { #category : #'private-parsing' }
 TPRBParser >> parseLiteralByteArrayObject [
+	"Ensure that the object contained in the array is the value of a byte."
+	"Return a literal value node of said byte."
 	(currentToken isLiteralToken and: 
 			[currentToken value isInteger and: [currentToken value between: 0 and: 255]]) 
 		ifFalse: [
@@ -670,7 +679,9 @@ TPRBParser >> parseMethod: aMethodDefinitionString [
 
 { #category : #'private-parsing' }
 TPRBParser >> parseNumberLiteral [
+	"Creates a literal value node from a number literal token."
 	| token |
+	"self deprecated: 'Unnecessary method because it is the same as parsePrimitiveValueLiteral, both called only by parsePrimitiveLiteral' transformWith: self parsePrimitiveLiteral."
 	token := currentToken.
 	self step.
 	
@@ -698,6 +709,7 @@ TPRBParser >> parseParenthesizedExpression [
 
 { #category : #'private-parsing' }
 TPRBParser >> parsePragma [
+	"Method called by parsePragmas which already verified that current token is the special character <"
 	| start pragma |
 	start := currentToken start.
 	self step.
@@ -710,12 +722,14 @@ TPRBParser >> parsePragma [
 
 { #category : #'private-parsing' }
 TPRBParser >> parsePragmaLiteral [
+	"A literal array token is #( or #[."
 	currentToken isLiteralArrayToken 
 		ifTrue: 
 			[^currentToken isForByteArray 
 				ifTrue: [self parseLiteralByteArray]
 				ifFalse: [self parseLiteralArray]].
 	currentToken isLiteralToken ifFalse: [^self parserError:'Literal constant expected'].
+	"Return a literal value node."
 	^self parsePrimitiveLiteral
 ]
 
@@ -728,6 +742,8 @@ TPRBParser >> parsePragmas [
 
 { #category : #'private-parsing' }
 TPRBParser >> parsePrimitiveIdentifier [
+	"Creates a Variable Node and copies the value, start position and comments in said node."
+	"This method is called by parseVariableNode which makes sure current token is Identifier."
 	| token node |
 	token := currentToken.
 	self step.
@@ -781,7 +797,9 @@ TPRBParser >> parsePrimitiveObject [
 
 { #category : #'private-parsing' }
 TPRBParser >> parsePrimitiveValueLiteral [
+	"Creates a literal value node from a literal token."
 	| token |
+	"self deprecated: 'Unnecessary method because it is the same as parseNumberLiteral, both called only by parsePrimitiveLiteral' transformWith: self parsePrimitiveLiteral."
 	token := currentToken.
 	self step.
 
@@ -919,6 +937,8 @@ TPRBParser >> parseUnaryPattern [
 
 { #category : #'private-parsing' }
 TPRBParser >> parseUnaryPragma [
+	"Current Token must be an Identifier."
+	"Return an RBPragmaNode."
 	| selector |
 	selector := currentToken.
 	self step.
@@ -927,6 +947,8 @@ TPRBParser >> parseUnaryPragma [
 
 { #category : #'private-parsing' }
 TPRBParser >> parseVariableNode [
+	"If called without having an Identifier Token : sends an error.
+	 Return a variable node with current token value, start position and comments."
 	currentToken isIdentifier 
 		ifFalse: [ ^ self parserError: 'Variable name expected' ].
 	^self parsePrimitiveIdentifier
