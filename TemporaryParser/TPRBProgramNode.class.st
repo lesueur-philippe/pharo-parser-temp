@@ -507,6 +507,11 @@ TPRBProgramNode >> isReturn [
 ]
 
 { #category : #testing }
+TPRBProgramNode >> isSelector [
+	^false
+]
+
+{ #category : #testing }
 TPRBProgramNode >> isSelf [
 	^ false
 ]

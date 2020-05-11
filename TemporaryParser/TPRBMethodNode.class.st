@@ -387,7 +387,7 @@ TPRBMethodNode >> isPrimitive [
 
 { #category : #accessing }
 TPRBMethodNode >> keywords [
-	^ selector keywords.
+	^ selector value keywords.
 ]
 
 { #category : #accessing }

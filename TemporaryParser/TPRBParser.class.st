@@ -312,13 +312,13 @@ TPRBParser >> parseBinaryMessage [
 
 { #category : #'private-parsing' }
 TPRBParser >> parseBinaryMessageWith: aNode [ 
-	| binaryToken |
-	binaryToken := currentToken.
+	| binaryNode |
+	binaryNode := self selectorNodeClass value: currentToken value start: (Array with: currentToken start).
 	self step.
 	^self messageNodeClass 
 		receiver: aNode
-		selector:  binaryToken value
-		keywordsPositions: (Array with: binaryToken start)
+		selector:  binaryNode
+		keywordsPositions: binaryNode start
 		arguments: (Array with: self parseUnaryMessage)
 ]
 
@@ -502,15 +502,16 @@ TPRBParser >> parseKeywordMessageWith: node [
 	| args isKeyword keywordsStartPositions selector|
 	args := OrderedCollection new: 3.
 	keywordsStartPositions := OrderedCollection new: 3.
-	selector := String new.
+	selector := self selectorNodeClass value: ''.
 	
 	isKeyword := false.
 	[currentToken isKeyword] whileTrue: 
 			[keywordsStartPositions add: currentToken start.
-			selector := selector, currentToken value.
+			selector value: (selector value, currentToken value).
 			self step.
 			args add: self parseBinaryMessage.
 			isKeyword := true].
+	selector start: keywordsStartPositions.
 	^isKeyword
 		ifTrue: 
 			[self messageNodeClass 
@@ -924,12 +925,12 @@ TPRBParser >> parseUnaryMessage [
 { #category : #'private-parsing' }
 TPRBParser >> parseUnaryMessageWith: aNode [ 
 	| selector |
-	selector := currentToken.
+	selector := self selectorNodeClass value: currentToken value start: (Array with: currentToken start).
 	self step.
 	^self messageNodeClass
 		receiver: aNode
-		selector:  selector value
-		keywordsPositions: (Array with: selector start)
+		selector:  selector
+		keywordsPositions: selector start
 		arguments: #()
 ]
 
@@ -1100,6 +1101,11 @@ TPRBParser >> scannerClass [
 TPRBParser >> scannerNext [
 
 	^ scanner next
+]
+
+{ #category : #'private-classes' }
+TPRBParser >> selectorNodeClass [
+	^ TPRBSelectorNode
 ]
 
 { #category : #'private-classes' }

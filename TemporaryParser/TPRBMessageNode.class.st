@@ -170,7 +170,7 @@ TPRBMessageNode >> isFirstCascaded [
 
 { #category : #testing }
 TPRBMessageNode >> isKeyword [
-	^(selector indexOf: $:) ~= 0.
+	^(selector value indexOf: $:) ~= 0.
 ]
 
 { #category : #testing }
@@ -195,12 +195,12 @@ TPRBMessageNode >> isUnary [
 
 { #category : #accessing }
 TPRBMessageNode >> keywords [
-	^ selector keywords.
+	^ selector value keywords.
 ]
 
 { #category : #accessing }
 TPRBMessageNode >> keywordsIntervals [
-	^ selector keywords
+	^ selector value keywords
 		with: self keywordsPositions 
 		collect: [ :keyword :start | start to: (start == 0 ifTrue: [ -1 ] ifFalse: [ start + keyword size - 1]) ].
 ]
@@ -283,7 +283,7 @@ TPRBMessageNode >> receiver: aValueNode [
 
 { #category : #initialization }
 TPRBMessageNode >> receiver: aValueNode selector: aSelector keywordsPositions: positionList arguments: valueNodes [
-	aSelector numArgs == valueNodes size
+	aSelector value numArgs == valueNodes size
 		ifFalse: 
 			[self error: 'Attempting to assign selector with wrong number of arguments.'].
 
@@ -405,7 +405,8 @@ TPRBMessageNode >> selector [
 { #category : #accessing }
 TPRBMessageNode >> selector: aSelector [
 	keywordsPositions := nil.
-	selector := aSelector asSymbol.
+	selector := aSelector.
+	aSelector parent: self
 ]
 
 { #category : #accessing }

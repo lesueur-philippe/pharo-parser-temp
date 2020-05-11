@@ -4,9 +4,10 @@ Class {
 	#category : #'TemporaryParser-Tests-Parser'
 }
 
-{ #category : #'to be reworked' }
+{ #category : #'test utils' }
 TPRBASTTest >> testCopyInContext [
 	| tree |
+	self deprecated: 'This test should be in the nodes tests'.
 	tree := self treeWithEverything.
 	self compare: tree to: (tree copyInContext: Dictionary new).
 	tree := self treeWithReallyEverything.
@@ -25,20 +26,6 @@ TPRBASTTest >> testCopyReproduceGivenTree [
 	self compare: tree to: tree copy.
 	tree := self treeWithReallyEverything.
 	self compare: tree to: tree copy.
-]
-
-{ #category : #'to be reworked' }
-TPRBASTTest >> testEqualToWithMapping [
-	| tree |
-	tree := self treeWithEverything.
-	self assert: (tree equalTo: tree withMapping: Dictionary new).
-	tree := self treeWithReallyEverything.
-	self assert: (tree equalTo: tree withMapping: Dictionary new).
-	
-	self exampleClasses do: [ :class |
-		class selectors do: [ :each |
-			tree := class parseTreeFor: each.
-			self assert: (tree equalTo: tree withMapping: Dictionary new) ] ]
 ]
 
 { #category : #'test utils' }
@@ -60,56 +47,4 @@ TPRBASTTest >> testEquivalentExceptRenaming [
 			self
 				assert: ((self parserClass parseMethod: each first) equalTo: (self parserClass parseMethod: (each at: 2)) exceptForVariables: #('c'))
 				identicalTo: each last ]
-]
-
-{ #category : #'to be reworked' }
-TPRBASTTest >> testIsA [
-	"Test that for a given tree, "
-	| nodes types |
-	nodes := Bag new.
-	types := Set new.
-	#(#(#isAssignment 1) 
-	  #(#isBlock 1) 
-	  #(#isCascade 1) 
-	  #(#isLiteralNode 2) 
-	  #(#isMessage 3) 
-	  #(#isMethod 1) 
-	  #(#isReturn 1) 
-	  #(#isSequence 2) 
-	  #(#isValue 15) 
-	  #(#isVariable 7) 
-	  #(#isUsed 10) 
-	  #(#isDirectlyUsed 9) 
-	  #(#hasParentheses 1) 
-	  #(#isBinary 0) 
-	  #(#isPrimitive 0) 
-	  #(#isImmediateNode 10) 
-	  #(#isWrite 1) 
-	  #(#isRead 3))
-		do: [ :each | each last timesRepeat: [ nodes add: each first ]. 
-			   types add: each first ].
-	self treeWithEverything nodesDo: [ :each | types do: [ :sel | ((each respondsTo: sel) and: [ each perform: sel ]) ifTrue: [ nodes remove: sel ] ] ].
-	self assertEmpty: nodes
-]
-
-{ #category : #'to be reworked' }
-TPRBASTTest >> testMatchInContext [
-	| tree |
-	tree := self treeWithEverything.
-	self assert: (tree match: tree inContext: Dictionary new).
-	tree := self treeWithReallyEverything.
-	self assert: (tree match: tree inContext: Dictionary new).
-	
-	self exampleClasses do: [ :class |
-		class selectors do: [ :each |
-			tree := class parseTreeFor: each.
-			self assert: (tree match: tree inContext: Dictionary new) ] ]
-]
-
-{ #category : #'to be reworked' }
-TPRBASTTest >> testNodesDo [
-	| size |
-	size := 0.
-	self treeWithEverything nodesDo: [ :e | size := size + 1 ].
-	self assert: size equals: 19
 ]
