@@ -352,6 +352,26 @@ TPRBScanner >> scanBinarySelector [
 ]
 
 { #category : #'private-scanning' }
+TPRBScanner >> scanComment [
+	| start stop |
+	start := stream position.
+	buffer reset.
+	buffer nextPut: currentCharacter.
+	self step.
+	self atEnd
+		ifTrue: [ ^ self scannerError: 'Unmatched " in comment.' ].
+	[ currentCharacter = $" and: [ buffer nextPut: currentCharacter. self step ~= $" ] ]
+		whileFalse: [ characterType = #eof
+				ifTrue: [ ^ self scannerError: 'Unmatched " in comment.' ].
+			buffer nextPut: currentCharacter.
+			self step ].
+	stop := self atEnd
+		ifTrue: [ stream position ]
+		ifFalse: [ stream position - 1 ].
+	comments add: (TPRBCommentToken value: buffer contents start: start stop: stop).
+]
+
+{ #category : #'private-scanning' }
 TPRBScanner >> scanError: theCause [
 	"An error token accepts every character given, recognised or not."
 	"The value of an error token is one character maximum : the current character."
@@ -637,26 +657,9 @@ TPRBScanner >> step [
 ]
 
 { #category : #'private-scanning' }
-TPRBScanner >> stripComment [
-	| start stop |
-	start := stream position.
-	self step.
-	characterType = #eof
-		ifTrue: [ ^ self scannerError: 'Unmatched " in comment.' ].
-	[ currentCharacter = $" and: [ self step ~= $" ] ]
-		whileFalse: [ characterType = #eof
-				ifTrue: [ ^ self scannerError: 'Unmatched " in comment.' ].
-			self step ].
-	stop := characterType = #eof
-		ifTrue: [ stream position ]
-		ifFalse: [ stream position - 1 ].
-	comments add: (start to: stop)
-]
-
-{ #category : #'private-scanning' }
 TPRBScanner >> stripSeparators [
 	
 	[[characterType = #separator] whileTrue: [self step].
 	currentCharacter = $"] 
-			whileTrue: [self stripComment]
+			whileTrue: [self scanComment]
 ]

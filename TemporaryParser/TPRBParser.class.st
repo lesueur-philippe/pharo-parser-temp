@@ -30,7 +30,7 @@ Class {
 
 { #category : #accessing }
 TPRBParser class >> errorNodeBlock [
-	^ [ :aString :position :parser| parser parseErrorNode: aString ]
+	^ [ :aString :position :parser| parser parseErrorNode: aString]
 ]
 
 { #category : #accessing }
@@ -210,9 +210,9 @@ TPRBParser >> errorPosition [
 TPRBParser >> extractCommentsFrom: aToken [
  
 	aToken comments 
-		collect: [:interval |
+		collect: [:commentToken |
 			"RBComment from: interval first to: interval last"
- 			TPRBComment with: (source copyFrom: (interval first + 1) to: (interval last - 1)) at: interval first]
+ 			TPRBComment with: commentToken]
 		into: comments
 ]
 
@@ -374,7 +374,7 @@ TPRBParser >> parseBlock [
 
 { #category : #'private-parsing' }
 TPRBParser >> parseBlockArgsInto: node [ 
-	| verticalBar args colons |
+	| verticalBar args colons firstBarPos |
 	args := OrderedCollection new: 2.
 	colons := OrderedCollection new: 2.
 	verticalBar := false.
@@ -387,7 +387,8 @@ TPRBParser >> parseBlockArgsInto: node [
 		ifTrue: 
 			[currentToken isBinary 
 				ifTrue: 
-					[node bar: currentToken start.
+					[ firstBarPos := currentToken start.
+					node bar: currentToken start.
 					currentToken value = #| 
 						ifTrue: [self step]
 						ifFalse: 
@@ -399,10 +400,10 @@ TPRBParser >> parseBlockArgsInto: node [
 									currentToken
 										value: #|;
 										start: currentToken start + 1]
-								ifFalse: [ args add:(self parserError: '''|'' expected')]]]
+								ifFalse: [ args add:((self parserError: '''|'' expected') start: firstBarPos)]]]
 				ifFalse: 
 					[(currentToken isSpecial and: [currentToken value = $]]) 
-						ifFalse: [ args add:(self parserError: '''|'' expected')]]].
+						ifFalse: [ args add:((self parserError: '''|'' expected') start: firstBarPos)]]].
 	node
 		arguments: args;
 		colons: colons.
@@ -458,11 +459,11 @@ TPRBParser >> parseErrorNode: aMessageString [
 	currentToken isError
 		ifTrue: [ ^ TPRBParseErrorNode errorMessage: currentToken cause value: currentToken value at: currentToken start ].
 	errorPosition := self errorPosition.
-	"the error at the end means in some cases that the start of the error is before"
+	"""the error at the end means in some cases that the start of the error is before""
 	aMessageString = ''')'' expected'
 		ifTrue: [ errorPosition := source findLastOccurrenceOfString: '(' startingAt: 1 ].
 	aMessageString = '''|'' expected'
-		ifTrue: [ errorPosition := source findLastOccurrenceOfString: '|' startingAt: 1 ].
+		ifTrue: [ errorPosition := source findLastOccurrenceOfString: '|' startingAt: 1 ]."
 	(errorPosition = 0) ifTrue: [ errorPosition := self errorPosition].
 	^ TPRBParseErrorNode errorMessage: aMessageString value: currentToken value asString at: errorPosition
 ]
@@ -475,6 +476,7 @@ TPRBParser >> parseExpression: anExpressionString [
 	node := self parseStatements: false.
 	(self methodNodeClass selector: #noMethod body: node) source: anExpressionString.	"Make the sequence node have a method node as its parent"
 	self atEnd ifFalse: [ ^ self parseIncompleteExpression: node ].
+	self addCommentsTo: node.
 	^node
 ]
 
@@ -565,17 +567,17 @@ TPRBParser >> parseKeywordPragma [
 TPRBParser >> parseLiteralArray [
 	| stream start stop |
 	start := currentToken start.
-	stream := (Array new: 5) writeStream.
+	stream := (OrderedCollection new: 5).
 	self step.
 	[self atEnd or: [currentToken isSpecial and: [currentToken value = $)]]] 
-		whileFalse: [stream nextPut: self parseLiteralArrayObject].
-	(currentToken isSpecial and: [currentToken value = $)]) 
-		ifFalse: [ ^ self parserError: ''')'' expected'].
+		whileFalse: [stream add: self parseLiteralArrayObject].
 	stop := currentToken stop.
+	(currentToken isSpecial and: [currentToken value = $)]) 
+		ifFalse: [ stream add: ((self parserError: ''')'' expected') start: start)].
 	self step.
 	^self literalArrayNodeClass 
 		startPosition: start
-		contents: stream contents
+		contents: stream
 		stopPosition: stop
 		isByteArray: false
 ]
@@ -711,7 +713,7 @@ TPRBParser >> parseParenthesizedExpression [
 			[node addParenthesis: (leftParen to: currentToken start).
 			self step.
 			node]
-		ifFalse: [ self parserError: ''')'' expected']
+		ifFalse: [ (self parserError: ''')'' expected') start: leftParen]
 ]
 
 { #category : #'private-parsing' }

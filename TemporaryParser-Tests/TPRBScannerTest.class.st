@@ -17,6 +17,80 @@ TPRBScannerTest >> scannerClass [
 	^ TPRBScanner
 ]
 
+{ #category : #testComment }
+TPRBScannerTest >> testCommentTokenHasTheRightValue [
+	| scanner token |
+	scanner := self buildScannerForText: String tab, ' "simple comment" firstToken'.
+	token := scanner next comments first.
+	self assert: token isComment.
+	self assert: token value equals: '"simple comment"'.
+	
+	scanner := self buildScannerForText: String tab, ' """nested at beggining"" comment" firstToken'.
+	token := scanner next comments first.
+	self assert: token isComment.
+	self assert: token value equals: '"""nested at beggining"" comment"'.
+	
+	scanner := self buildScannerForText: String tab, ' "comment ""nested at end""" firstToken'.
+	token := scanner next comments first.
+	self assert: token isComment.
+	self assert: token value equals: '"comment ""nested at end"""'.
+	
+]
+
+{ #category : #testComment }
+TPRBScannerTest >> testCommentTokenStartAtFirstQuote [
+	| scanner token |
+	scanner := self buildScannerForText: ' "simple comment" firstToken'.
+	token := scanner next comments first.
+	self assert: token isComment.
+	self assert: token start equals: 2.
+	
+	scanner := self buildScannerForText: ' """nested at beggining"" comment" firstToken'.
+	token := scanner next comments first.
+	self assert: token isComment.
+	self assert: token start equals: 2.
+	
+	scanner := self buildScannerForText: '"comment ""nested at end""" firstToken'.
+	token := scanner next comments first.
+	self assert: token isComment.
+	self assert: token start equals: 1.
+	
+]
+
+{ #category : #testComment }
+TPRBScannerTest >> testCommentTokenStopAtLastQuote [
+	| scanner token |
+	scanner := self buildScannerForText: ' "simple comment" firstToken'.
+	token := scanner next comments first.
+	self assert: token isComment.
+	self assert: token stop equals: 17.
+	
+	scanner := self buildScannerForText: ' """nested at beggining"" comment" firstToken'.
+	token := scanner next comments first.
+	self assert: token isComment.
+	self assert: token stop equals: 34.
+	
+	scanner := self buildScannerForText: '"comment ""nested at end""" firstToken'.
+	token := scanner next comments first.
+	self assert: token isComment.
+	self assert: token stop equals: 27.
+	
+]
+
+{ #category : #testComment }
+TPRBScannerTest >> testMultipleCommentTokensAreWellSeparated [
+	| scanner token comments |
+	scanner := self buildScannerForText: String tab, ' "first comment" " second comment" firstToken'.
+	comments := scanner next comments.
+	token := comments first.
+	self assert: token isComment.
+	self assert: token value equals: '"first comment"'.
+	
+	token := comments second.
+	self assert: token isComment.
+	self assert: token value equals: '" second comment"'.
+]
+
 { #category : #testLiteral }
 TPRBScannerTest >> testNextAcceptAllAlphabeticAsLiteral [
 	| scanner token |
@@ -253,7 +327,7 @@ TPRBScannerTest >> testNextEOFContainsCommentsWhenNoOtherToken [
 	
 	token := scanner next.
 	self assert: token isEOF.
-	self assert: token comments equals:(OrderedCollection newFrom: {(1 to: 15)}).
+	self assert: token comments size equals: 1.
 	self assert: token start equals: 16.
 ]
 
@@ -273,7 +347,8 @@ TPRBScannerTest >> testNextFirstTokenContainsFollowingComments [
 	
 	"The first token 'firstToken' takes the previous comment and the following one"
 	token := scanner next.
-	self assert: token comments equals: (OrderedCollection newFrom: {(12 to: 30)}).
+	self assert: token comments size equals: 1.
+	self assert: token comments first isComment.
 ]
 
 { #category : #testSeparators }
@@ -281,7 +356,8 @@ TPRBScannerTest >> testNextFirstTokenContainsPrecedingComments [
 	| scanner token |
 	scanner := self buildScannerForText: '"start comment"firstToken'.
 	token := scanner next.
-	self assert: token comments equals: (OrderedCollection newFrom: {(1 to: 15)}) .
+	self assert: token comments size equals: 1.
+	self assert: token comments first isComment.
 	
 ]
 
@@ -925,7 +1001,7 @@ TPRBScannerTest >> testNextSecondTokenDoesNotConsumePrecedingComment [
 	token := scanner next.
 	"The next token 'secondToken' takes the following 2 comments."
 	token := scanner next.
-	self assert: token comments equals: (OrderedCollection newFrom: {(49 to: 66). (68 to: 86)}).
+	self assert: token comments size equals: 2.
 	self assert: token start equals: 36.
 ]
 
@@ -1320,14 +1396,14 @@ TPRBScannerTest >> testNextWithAnUnknownCharacterGetError [
 	self verifyErrorToken: scannedToken message: 'Unknown character' translated valueExpected: source
 ]
 
-{ #category : #tests }
+{ #category : #testComment }
 TPRBScannerTest >> testNextWithTwoDoubleQuotesInComment [
 	| source token |
 	source := '"only the"" opening"'.
 	self
 		shouldnt: [ token := (self buildScannerForText: source) next ]
 		raise: SyntaxErrorNotification.
-	self assert: token comments first equals: (1 to: source size)
+	self assert: token comments first value equals: '"only the"" opening"'.
 ]
 
 { #category : #tests }

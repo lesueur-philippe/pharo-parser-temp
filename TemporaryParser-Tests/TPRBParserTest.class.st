@@ -379,6 +379,27 @@ TPRBParserTest >> testDelimitationsOfArrayNodesAreBrackets [
 ]
 
 { #category : #'error testing' }
+TPRBParserTest >> testErrorNodeForBadParenthesesStartAtFirstParenthese [
+	| tree |
+	tree := self parseFaultyExpression: '( faulty parentheses message node'.
+	self assert: tree isFaulty.
+	self assert: tree errorMessage equals: ''')'' expected'.
+	self assert: tree start equals: 1.
+]
+
+{ #category : #'error testing' }
+TPRBParserTest >> testErrorNodeForBadParenthesesStartAtLiteralArrayToken [
+	| tree error |
+	tree := self parseFaultyExpression: '#( faulty parentheses litteral array node'.
+	self assert: tree isLiteralArray.
+	error := tree contents last.
+	
+	self assert: error isFaulty.
+	self assert: error errorMessage equals: ''')'' expected'.
+	self assert: tree start equals: 1.
+]
+
+{ #category : #'error testing' }
 TPRBParserTest >> testFaultyLiteralRaiseSyntaxError [
 	#('#"bar"foo' '# foo' '#1' '#12' '#12.3' '# 1' '##1' '#"bar"1') 
 		do: [ :expr | 

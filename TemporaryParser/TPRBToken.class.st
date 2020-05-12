@@ -45,6 +45,11 @@ TPRBToken >> isBinary [
 ]
 
 { #category : #testing }
+TPRBToken >> isComment [
+	^false
+]
+
+{ #category : #testing }
 TPRBToken >> isEOF [
 	^false
 ]

@@ -28,13 +28,28 @@ Class {
 	#superclass : #TPRBNode,
 	#instVars : [
 		'contents',
-		'start'
+		'start',
+		'stop'
 	],
 	#category : #'TemporaryParser-Nodes'
 }
 
 { #category : #'instance creation' }
+TPRBComment class >> with: aCommentToken [
+	| str cpystr |
+	str := aCommentToken value.
+	cpystr := str size > 2 
+		ifTrue: [str copyFrom:2 to: str size - 1]
+		ifFalse: [''].
+	^ self new
+		with: cpystr from: aCommentToken start to: aCommentToken stop;
+		yourself. 
+	
+]
+
+{ #category : #'instance creation' }
 TPRBComment class >> with: aString at: startPosition [
+	self deprecated: 'Should use method with: with a comment token as parameter.'.
 	^ self new
 		with: aString at: startPosition;
 		yourself. 
@@ -84,12 +99,23 @@ TPRBComment >> start [
 
 { #category : #accessing }
 TPRBComment >> stop [
-	^ start + self size - 1
+	^ stop
 ]
 
 { #category : #initialization }
 TPRBComment >> with: aString at: startPosition [
+	self deprecated: 'The use of a comment token implies a preexisting stop position. 
+	                  Should use with: from: to:'. 
 	start := startPosition.
-	contents := aString
+	contents := aString.
+	stop := startPosition + aString size - 1.
+
+]
+
+{ #category : #initialization }
+TPRBComment >> with: aString from: aStartPosition to: aStopPosition [
+	start := aStartPosition.
+	stop := aStopPosition.
+	contents := aString.
 
 ]
