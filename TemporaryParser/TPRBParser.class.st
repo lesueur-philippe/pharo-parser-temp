@@ -312,13 +312,13 @@ TPRBParser >> parseBinaryMessage [
 
 { #category : #'private-parsing' }
 TPRBParser >> parseBinaryMessageWith: aNode [ 
-	| binaryToken |
-	binaryToken := currentToken.
+	| binaryNode |
+	binaryNode := self selectorNodeClass value: currentToken value start: (Array with: currentToken start).
 	self step.
 	^self messageNodeClass 
 		receiver: aNode
-		selector:  binaryToken value
-		keywordsPositions: (Array with: binaryToken start)
+		selector:  binaryNode
+		keywordsPositions: binaryNode start
 		arguments: (Array with: self parseUnaryMessage)
 ]
 
@@ -412,6 +412,7 @@ TPRBParser >> parseBlockArgsInto: node [
 { #category : #'private-parsing' }
 TPRBParser >> parseCascadeMessage [
 	| node receiver messages semicolons |
+	"Parse of the first message. It can be either unary, binary or keyword."
 	node := self parseKeywordMessage.
 	(currentToken isSpecial and: [ currentToken value = $; ])
 		ifTrue: [ (node isVariable or: [ node hasParentheses ])
@@ -435,10 +436,16 @@ TPRBParser >> parseCascadeMessage [
 								ifFalse: 
 									[| temp |
 									currentToken isLiteralToken ifTrue: [self patchNegativeLiteral].
-									currentToken isBinary ifFalse: [ ^ self parserError: 'Message expected'].
-									temp := self parseBinaryMessageWith: receiver.
-									temp == receiver ifTrue: [ ^ self parserError: 'Message expected'].
-									temp]]].
+			"Upon encountering an error in the cascade, it stores an error node as it would store a message node and continues the parsing of the cascade.
+			 This can allow the possibility of fixing the cascade simply by replacing the false node by another."
+									currentToken isBinary ifFalse: 
+										[ temp := self parserError: 'Message expected'.
+										  (currentToken isSpecial and: [currentToken value = $;]) ifFalse: [self step.].
+										  temp.]
+									ifTrue: 
+										[temp := self parseBinaryMessageWith: receiver.
+										 temp == receiver ifTrue: 
+											[ self parserError: 'Message expected']. temp]]]].
 					
 		self addCommentsTo: newMessage.
 		messages add: newMessage].
@@ -447,7 +454,7 @@ TPRBParser >> parseCascadeMessage [
 
 { #category : #'error handling' }
 TPRBParser >> parseErrorNode: aMessageString [
-	| sourceString errorPosition |
+	| errorPosition |
 	currentToken isError
 		ifTrue: [ ^ TPRBParseErrorNode errorMessage: currentToken cause value: currentToken value at: currentToken start ].
 	errorPosition := self errorPosition.
@@ -457,8 +464,7 @@ TPRBParser >> parseErrorNode: aMessageString [
 	aMessageString = '''|'' expected'
 		ifTrue: [ errorPosition := source findLastOccurrenceOfString: '|' startingAt: 1 ].
 	(errorPosition = 0) ifTrue: [ errorPosition := self errorPosition].
-	sourceString := source copyFrom: errorPosition to: source size.
-	^ TPRBParseErrorNode errorMessage: aMessageString value: sourceString at: errorPosition
+	^ TPRBParseErrorNode errorMessage: aMessageString value: currentToken value asString at: errorPosition
 ]
 
 { #category : #accessing }
@@ -496,15 +502,16 @@ TPRBParser >> parseKeywordMessageWith: node [
 	| args isKeyword keywordsStartPositions selector|
 	args := OrderedCollection new: 3.
 	keywordsStartPositions := OrderedCollection new: 3.
-	selector := String new.
+	selector := self selectorNodeClass value: ''.
 	
 	isKeyword := false.
 	[currentToken isKeyword] whileTrue: 
 			[keywordsStartPositions add: currentToken start.
-			selector := selector, currentToken value.
+			selector value: (selector value, currentToken value).
 			self step.
 			args add: self parseBinaryMessage.
 			isKeyword := true].
+	selector start: keywordsStartPositions.
 	^isKeyword
 		ifTrue: 
 			[self messageNodeClass 
@@ -918,12 +925,12 @@ TPRBParser >> parseUnaryMessage [
 { #category : #'private-parsing' }
 TPRBParser >> parseUnaryMessageWith: aNode [ 
 	| selector |
-	selector := currentToken.
+	selector := self selectorNodeClass value: currentToken value start: (Array with: currentToken start).
 	self step.
 	^self messageNodeClass
 		receiver: aNode
-		selector:  selector value
-		keywordsPositions: (Array with: selector start)
+		selector:  selector
+		keywordsPositions: selector start
 		arguments: #()
 ]
 
@@ -963,7 +970,7 @@ TPRBParser >> parserError: aString [
 	currentToken isError 
 		ifTrue: [ errorMessage := currentToken cause. errorPosition := currentToken location ] 
 		ifFalse: [errorMessage := aString. errorPosition := currentToken start].
-	
+
 	newSource := SyntaxErrorNotification
 						inClass: Object
 						withCode: source
@@ -1095,6 +1102,11 @@ TPRBParser >> scannerClass [
 TPRBParser >> scannerNext [
 
 	^ scanner next
+]
+
+{ #category : #'private-classes' }
+TPRBParser >> selectorNodeClass [
+	^ TPRBSelectorNode
 ]
 
 { #category : #'private-classes' }

@@ -186,9 +186,9 @@ TPRBCascadeNode >> statementComments [
 	statementComments := OrderedCollection withAll: self comments.
 	statementComments addAll: messages first receiver statementComments.
 	messages do: 
-			[:each | 
+			[:each | each isFaulty ifFalse: [ 
 			each arguments 
-				do: [:arg | statementComments addAll: arg statementComments]].
+				do: [:arg | statementComments addAll: arg statementComments]]].
 	^statementComments asSortedCollection: [:a :b | a start < b start]
 ]
 

@@ -184,7 +184,7 @@ TPRBSimpleFormatter >> formatSelectorAndArguments: aMessageNode firstSeparator: 
 	aMessageNode isUnary
 		ifTrue: [ 
 			self space.
-			codeStream nextPutAll: aMessageNode selector ]
+			self visitSelectorNode: aMessageNode selector]
 		ifFalse: [ 
 			aMessageNode selectorParts
 				with: aMessageNode arguments
@@ -323,7 +323,7 @@ TPRBSimpleFormatter >> needsParenthesisFor: aNode [
 		ifFalse: [ ^ true ].
 	aNode precedence = parent precedence
 		ifFalse: [ ^ true ].
-	^ self precedenceOf: parent selector greaterThan: aNode selector
+	^ self precedenceOf: parent selector value greaterThan: aNode selector value
 ]
 
 { #category : #private }
@@ -411,12 +411,13 @@ TPRBSimpleFormatter >> visitCascadeNode: aCascadeNode [
 	self
 		indentAround: [ self newLine.
 			aCascadeNode messages
-				do: [ :each | 
+				do: [ :each | each isFaulty ifFalse: [ 
 					self
 						indentAround: [ self
 								formatSelectorAndArguments: each
 								firstSeparator: [  ]
 								restSeparator: [ self space ] ] ]
+					 ifTrue: [ self visitParseErrorNode: each ] ]
 				separatedBy: [ codeStream nextPut: $;.
 					self newLine ] ]
 ]
@@ -509,6 +510,11 @@ TPRBSimpleFormatter >> visitPragmaNode: aPragmaNode [
 TPRBSimpleFormatter >> visitReturnNode: aReturnNode [ 
 	codeStream nextPut: $^.
 	self visitNode: aReturnNode value
+]
+
+{ #category : #visiting }
+TPRBSimpleFormatter >> visitSelectorNode: aSelectorNode [
+		codeStream nextPutAll: aSelectorNode value
 ]
 
 { #category : #visiting }
