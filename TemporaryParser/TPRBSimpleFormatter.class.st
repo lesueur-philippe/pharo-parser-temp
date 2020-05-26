@@ -410,6 +410,7 @@ TPRBSimpleFormatter >> visitCascadeNode: aCascadeNode [
 	self visitNode: aCascadeNode receiver.
 	self
 		indentAround: [ self newLine.
+			"For each message of the cascade, we have to verify if it is a message node or an error node           because error nodes don't understand 'arguments'."
 			aCascadeNode messages
 				do: [ :each | each isFaulty ifFalse: [ 
 					self

@@ -185,6 +185,7 @@ TPRBCascadeNode >> statementComments [
 	| statementComments |
 	statementComments := OrderedCollection withAll: self comments.
 	statementComments addAll: messages first receiver statementComments.
+	"For each message of the cascade, we have to verify if it is a message node or an error node because     error nodes don't understand 'arguments'."
 	messages do: 
 			[:each | each isFaulty ifFalse: [ 
 			each arguments 

@@ -781,6 +781,28 @@ TPRBParserTest >> testLiteralIntevals [
 	self assert: tree contents last contents first start equals: 11
 ]
 
+{ #category : #'error testing' }
+TPRBParserTest >> testMessageWithFaultySelectorGivesMessageNode [
+	| tree |
+	tree := self parseFaultyExpression: 'message 2'.
+	self assert: tree isMessage.
+]
+
+{ #category : #'error testing' }
+TPRBParserTest >> testMessageWithFaultySelectorHasErrorNodeAsSelector [
+	| tree |
+	tree := self parseFaultyExpression: 'message 2'.
+	self assert: tree selector isFaulty.
+	self assert: tree selector value equals: '2'.
+]
+
+{ #category : #'error testing' }
+TPRBParserTest >> testMessageWithFaultySelectorIsFaulty [
+	| tree |
+	tree := self parseFaultyExpression: 'message 2'.
+	self assert: tree isFaulty.
+]
+
 { #category : #testIntervals }
 TPRBParserTest >> testMethodNodeEndAtTheEndOfTheString [
 	| tree |
@@ -1476,10 +1498,43 @@ TPRBParserTest >> testSymbolLiteralSuccessfullyCreateLiteralNode [
 		self assert: tree stop equals: parseString size ].
 ]
 
+{ #category : #'error testing' }
+TPRBParserTest >> testUnclosedArrayErrorNodeContainsRightValue [
+	| tree |
+	tree := self parseFaultyExpression: '{ faulty parentheses message node'.
+	self assert: tree isFaulty.
+	self assert: tree value equals: '{ faulty parentheses message node'
+]
+
+{ #category : #'error testing' }
+TPRBParserTest >> testUnclosedBracketErrorNodeContainsRightValue [
+	| tree errorNode |
+	tree := self parseFaultyExpression: '[ faulty parentheses message node'.
+	errorNode := tree statements second.
+	self assert: errorNode isFaulty.
+	self assert: errorNode value equals: '[ faulty parentheses message node'
+]
+
+{ #category : #'error testing' }
+TPRBParserTest >> testUnclosedParenthesesErrorNodeContainsRightValue [
+	| tree |
+	tree := self parseFaultyExpression: '( faulty parentheses message node'.
+	self assert: tree isFaulty.
+	self assert: tree value equals: '( faulty parentheses message node'
+]
+
 { #category : #'garbage tests' }
 TPRBParserTest >> testUnclosedParenthesesRaiseSyntaxError [
 	"Should propose a closing parenthese before the end of the statement. Should also offer possibility to quickly erase it."
 	self should: [self parserClass parseExpression: '(temp := 1 + 3 .'] raise: SyntaxErrorNotification.
+]
+
+{ #category : #'error testing' }
+TPRBParserTest >> testUnclosedTemporariesErrorNodeContainsRightValue [
+	| tree |
+	tree := self parseFaultyExpression: '| faulty temporaries'.
+	self assert: tree isFaulty.
+	self assert: tree value equals: '| faulty temporaries'
 ]
 
 { #category : #private }

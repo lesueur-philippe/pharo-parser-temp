@@ -36,6 +36,8 @@ Class {
 
 { #category : #'instance creation' }
 TPRBComment class >> with: aCommentToken [
+	"To respect the previously implemented comment node content, 
+	 we strip the surrounding quotes of the comment."
 	| str cpystr |
 	str := aCommentToken value.
 	cpystr := str size > 2 
@@ -68,6 +70,8 @@ TPRBComment >> acceptVisitor: aProgramNodeVisitor [
 
 { #category : #accessing }
 TPRBComment >> contents [
+	"The content of a comment node doesn't contain the quotes surrounding the comment.
+	 However, the quotes inside of the comment remain nested."
 	^ contents
 ]
 
@@ -100,6 +104,11 @@ TPRBComment >> start [
 { #category : #accessing }
 TPRBComment >> stop [
 	^ stop
+]
+
+{ #category : #'as yet unclassified' }
+TPRBComment >> toto [
+	^self
 ]
 
 { #category : #initialization }

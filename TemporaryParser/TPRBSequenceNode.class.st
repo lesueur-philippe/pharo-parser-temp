@@ -285,7 +285,8 @@ TPRBSequenceNode >> indexOfNode: aNode [
 { #category : #initialization }
 TPRBSequenceNode >> initialize [
 	super initialize.
-	periods := statements := temporaries := #()
+	periods := temporaries := #().
+	statements := OrderedCollection new.
 ]
 
 { #category : #testing }

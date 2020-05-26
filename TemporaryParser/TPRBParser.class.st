@@ -354,7 +354,7 @@ TPRBParser >> parseBinaryPragma [
 
 { #category : #'private-parsing' }
 TPRBParser >> parseBlock [
-	| position node |
+	| position node errorNode |
 	position := currentToken start.
 	self step.
 	node := self blockNodeClass new. 
@@ -365,7 +365,9 @@ TPRBParser >> parseBlock [
 	(self parseStatements: false into: node body).
 	
 	(currentToken isSpecial and: [currentToken value = $]])
-		ifFalse: [ self addParserError: ''']'' expected' to: node body.
+		ifFalse: [ errorNode := self parserError: ''']'' expected'.
+			errorNode value: '[ ', node body formattedCode.
+			node body addFaultyNode: errorNode. 
 			^ node].
 	node right: currentToken start.
 	self step.
@@ -476,7 +478,8 @@ TPRBParser >> parseExpression: anExpressionString [
 	node := self parseStatements: false.
 	(self methodNodeClass selector: #noMethod body: node) source: anExpressionString.	"Make the sequence node have a method node as its parent"
 	self atEnd ifFalse: [ ^ self parseIncompleteExpression: node ].
-	self addCommentsTo: node.
+	(node statements isEmpty and: [currentToken comments notNil]) 
+			ifTrue: [self extractCommentsFrom: currentToken. self addCommentsTo: node.].
 	^node
 ]
 
@@ -565,19 +568,22 @@ TPRBParser >> parseKeywordPragma [
 
 { #category : #'private-parsing' }
 TPRBParser >> parseLiteralArray [
-	| stream start stop |
+	| literals start stop errorNode |
 	start := currentToken start.
-	stream := (OrderedCollection new: 5).
+	literals := (OrderedCollection new: 5).
 	self step.
 	[self atEnd or: [currentToken isSpecial and: [currentToken value = $)]]] 
-		whileFalse: [stream add: self parseLiteralArrayObject].
+		whileFalse: [literals add: self parseLiteralArrayObject].
 	stop := currentToken stop.
 	(currentToken isSpecial and: [currentToken value = $)]) 
-		ifFalse: [ stream add: ((self parserError: ''')'' expected') start: start)].
+		ifFalse: [ errorNode := ((self parserError: ''')'' expected') start: start; stop: currentToken stop).
+					  errorNode value: '#( '.
+					  literals do: [:node | errorNode value: errorNode value, node formattedCode,' '].
+					  ^errorNode].
 	self step.
 	^self literalArrayNodeClass 
 		startPosition: start
-		contents: stream
+		contents: literals
 		stopPosition: stop
 		isByteArray: false
 ]
@@ -824,7 +830,7 @@ TPRBParser >> parsePrimitiveValueLiteral [
 TPRBParser >> parseStatementList: pragmaBoolean into: sequenceNode [ 
 	| statements return periods returnPosition node |
 	return := false.
-	statements := OrderedCollection new.
+	statements := sequenceNode statements.
 	periods := OrderedCollection new.
 	self addCommentsTo: sequenceNode.
 	pragmaBoolean ifTrue: [self parsePragmas].
@@ -877,7 +883,7 @@ TPRBParser >> parseStatements: pragmaBoolean [
 
 { #category : #'private-parsing' }
 TPRBParser >> parseStatements: pragmaBoolean into: aSequenceNode [
-	| temps leftBar rightBar |
+	| temps leftBar rightBar errorNode errorValue |
 	temps := #().
 	leftBar := rightBar := nil.
 	currentToken isBinary 
@@ -888,9 +894,17 @@ TPRBParser >> parseStatements: pragmaBoolean into: aSequenceNode [
 					self step.
 					temps := self parseTemps.
 					(currentToken isBinary and: [currentToken value = #|]) 
-						ifFalse: [ self addParserError: '''|'' expected' to: aSequenceNode.
-							^ aSequenceNode].
-					rightBar := currentToken start.
+						ifFalse: [ errorNode := self parserError: '''|'' expected'.
+									  errorValue := '| '.
+									  (temps collect: [:each | each formattedCode, ' ']) 
+											do: [:code | errorValue := errorValue, code].
+									  errorNode value: errorValue, errorNode value.
+									  errorNode start: leftBar.
+									 aSequenceNode addFaultyNode: errorNode.
+									 temps := #().
+									 leftBar := nil.
+								    ]
+						ifTrue: [ rightBar := currentToken start ].
 					self step]
 				ifFalse: 
 					[currentToken value = #'||' 

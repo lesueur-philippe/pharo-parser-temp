@@ -16,7 +16,8 @@ Class {
 	#instVars : [
 		'errorMessage',
 		'value',
-		'start'
+		'start',
+		'stop'
 	],
 	#category : #'TemporaryParser-Nodes'
 }
@@ -128,7 +129,14 @@ TPRBParseErrorNode >> startWithoutParentheses [
 
 { #category : #accessing }
 TPRBParseErrorNode >> stop [
-	^ start + value size - 1.
+	^ stop 
+		ifNil: [start + value size - 1.]
+		ifNotNil: [ stop ]
+]
+
+{ #category : #accessing }
+TPRBParseErrorNode >> stop: aStopPosition [
+	stop := aStopPosition
 ]
 
 { #category : #accessing }
