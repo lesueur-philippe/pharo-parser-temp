@@ -24,7 +24,6 @@ TPClyMethodCodeEditorToolMorph class >> shouldBeActivatedInContext: aBrowserCont
 TPClyMethodCodeEditorToolMorph >> applyChanges [
 	| selector methodClass currentMethod |
 	methodClass := self chooseClassForNewMethodIfNone: [^false].
-	self haltOnce.
 	selector := methodClass compile: self pendingText classified: editingMethod protocol notifying: textMorph.
 	selector ifNil: [^false ].
 	currentMethod := methodClass >> selector.
@@ -36,7 +35,6 @@ TPClyMethodCodeEditorToolMorph >> applyChanges [
 { #category : #building }
 TPClyMethodCodeEditorToolMorph >> applyDecorations [
 	| hasEdits |
-	self haltOnce.
 	hasEdits := textMorph hasUnacceptedEdits.
 	textMorph segments copy do: #delete.	
 	"literal methods do not need ot be stylized and this is an operation that can take 
@@ -313,8 +311,7 @@ TPClyMethodCodeEditorToolMorph >> switchToMethod: aMethod [
 TPClyMethodCodeEditorToolMorph >> textChanged: aTextChanged [
 	| ast |
 	super textChanged: aTextChanged.
-	ast := RBParser parseFaultyMethod: self pendingText.
-	self haltOnce.
+	ast := TPRBParser parseFaultyMethod: self pendingText.
 	TPIconStyler styleText: textModel withAst: ast.
 ]
 

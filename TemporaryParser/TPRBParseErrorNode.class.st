@@ -36,7 +36,7 @@ TPRBParseErrorNode class >> errorMessage: aString value: aValue at: aPosition [
 TPRBParseErrorNode >> = anObject [ 
 	self == anObject ifTrue: [^true].
 	self class = anObject class ifFalse: [^false].
-	^anObject value = value and: [ anObject errorMessage = errorMessage ]
+	^anObject value = value and: [[ anObject errorMessage = errorMessage ] and: [ anObject start = start ]]
 ]
 
 { #category : #visiting }

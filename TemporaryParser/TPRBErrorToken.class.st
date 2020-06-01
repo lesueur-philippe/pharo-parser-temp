@@ -32,6 +32,11 @@ TPRBErrorToken >> isError [
 	^true
 ]
 
+{ #category : #private }
+TPRBErrorToken >> length [
+	^self value size + 1
+]
+
 { #category : #accessing }
 TPRBErrorToken >> location [
 	^ location

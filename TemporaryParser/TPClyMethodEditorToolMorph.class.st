@@ -214,8 +214,3 @@ TPClyMethodEditorToolMorph >> toggleExtendingPackage [
 	extendingPackage := browser searchDialog 
 		requestSingleObject: 'Choose package for method' from: ClyAllPackagesQuery sorted
 ]
-
-{ #category : #'as yet unclassified' }
-TPClyMethodEditorToolMorph >> toto [
-	self flag: #aFlag.
-]

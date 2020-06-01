@@ -379,24 +379,40 @@ TPRBParserTest >> testDelimitationsOfArrayNodesAreBrackets [
 ]
 
 { #category : #'error testing' }
+TPRBParserTest >> testErrorNodeForBadParenthesesHasRightMessage [
+	| tree |
+	tree := self parseFaultyExpression: '( faulty parentheses message node'.
+	self assert: tree isParseError.
+	self assert: tree errorMessage equals: ''')'' expected'.
+]
+
+{ #category : #'error testing' }
 TPRBParserTest >> testErrorNodeForBadParenthesesStartAtFirstParenthese [
 	| tree |
 	tree := self parseFaultyExpression: '( faulty parentheses message node'.
-	self assert: tree isFaulty.
-	self assert: tree errorMessage equals: ''')'' expected'.
+	self assert: tree isParseError.
 	self assert: tree start equals: 1.
 ]
 
 { #category : #'error testing' }
 TPRBParserTest >> testErrorNodeForBadParenthesesStartAtLiteralArrayToken [
-	| tree error |
-	tree := self parseFaultyExpression: '#( faulty parentheses litteral array node'.
-	self assert: tree isLiteralArray.
-	error := tree contents last.
+	| tree expr |
+	expr := '#( faulty parentheses litteral array node'.
+	tree := self parseFaultyExpression: expr.
 	
-	self assert: error isFaulty.
-	self assert: error errorMessage equals: ''')'' expected'.
+	self assert: tree isParseError.
+	self assert: tree errorMessage equals: ''')'' expected'.
 	self assert: tree start equals: 1.
+	self assert: tree stop equals: expr size.
+]
+
+{ #category : #'error testing' }
+TPRBParserTest >> testErrorNodeForBadParenthesesStopAtEnd [
+	| tree expr |
+	expr := '( faulty parentheses message node'.
+	tree := self parseFaultyExpression: expr.
+	self assert: tree isParseError.
+	self assert: tree stop equals: expr size.
 ]
 
 { #category : #'error testing' }
@@ -460,10 +476,14 @@ TPRBParserTest >> testGarbageTemporaryVariableHasMissingClosure [
 { #category : #'garbage tests' }
 TPRBParserTest >> testGarbageTemporaryVariableIsWrong [
 	"The parser doesn't recognise the 2 because it is not an identifier."
-	| tree |
+	| tree errorNode |
 	tree := self parseFaultyExpression: '| 2 |'.
 	self assert: tree isFaulty.
-	self assert: tree errorMessage equals: '''|'' expected'.
+	self assert: tree isSequence.
+	
+	errorNode := tree statements first.
+	self assert: errorNode isParseError.
+	self assert: errorNode errorMessage equals: '''|'' expected'.
 	
 	
 ]
@@ -1502,8 +1522,8 @@ TPRBParserTest >> testSymbolLiteralSuccessfullyCreateLiteralNode [
 TPRBParserTest >> testUnclosedArrayErrorNodeContainsRightValue [
 	| tree |
 	tree := self parseFaultyExpression: '{ faulty parentheses message node'.
-	self assert: tree isFaulty.
-	self assert: tree value equals: '{ faulty parentheses message node'
+	self assert: tree isParseError.
+	self assert: tree value equals: '{faulty parentheses message node'
 ]
 
 { #category : #'error testing' }
@@ -1534,7 +1554,7 @@ TPRBParserTest >> testUnclosedTemporariesErrorNodeContainsRightValue [
 	| tree |
 	tree := self parseFaultyExpression: '| faulty temporaries'.
 	self assert: tree isFaulty.
-	self assert: tree value equals: '| faulty temporaries'
+	self assert: tree value equals: '| faulty temporaries '
 ]
 
 { #category : #private }

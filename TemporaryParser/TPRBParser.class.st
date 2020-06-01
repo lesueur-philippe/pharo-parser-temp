@@ -276,7 +276,11 @@ TPRBParser >> parseArray [
 	node left: position.
 	self parseStatementList: false  into: node.
 	(currentToken isSpecial and: [currentToken value = $}]) 
-		ifFalse: [ ^ self parserError: 'expected }'].
+		ifFalse: [ | errorCode | errorCode := node formattedCode.
+					  ^ (self parserError: 'expected }') 
+							value: (errorCode truncateTo: errorCode size-1); 
+							start: node left; 
+							stop: node statements last stop.].
 	node right: currentToken start.
 	self step.
 	^ node
@@ -367,7 +371,8 @@ TPRBParser >> parseBlock [
 	(currentToken isSpecial and: [currentToken value = $]])
 		ifFalse: [ errorNode := self parserError: ''']'' expected'.
 			errorNode value: '[ ', node body formattedCode.
-			node body addFaultyNode: errorNode. 
+			errorNode stop: currentToken stop. 
+			node body addFaultyNode: errorNode.
 			^ node].
 	node right: currentToken start.
 	self step.
@@ -576,7 +581,7 @@ TPRBParser >> parseLiteralArray [
 		whileFalse: [literals add: self parseLiteralArrayObject].
 	stop := currentToken stop.
 	(currentToken isSpecial and: [currentToken value = $)]) 
-		ifFalse: [ errorNode := ((self parserError: ''')'' expected') start: start; stop: currentToken stop).
+		ifFalse: [ errorNode := ((self parserError: ''')'' expected') start: start; stop: stop).
 					  errorNode value: '#( '.
 					  literals do: [:node | errorNode value: errorNode value, node formattedCode,' '].
 					  ^errorNode].
@@ -719,7 +724,7 @@ TPRBParser >> parseParenthesizedExpression [
 			[node addParenthesis: (leftParen to: currentToken start).
 			self step.
 			node]
-		ifFalse: [ (self parserError: ''')'' expected') start: leftParen]
+		ifFalse: [ ^ (self parserError: ''')'' expected') start: leftParen; stop: currentToken stop; value:'( ', node formattedCode]
 ]
 
 { #category : #'private-parsing' }
@@ -883,7 +888,7 @@ TPRBParser >> parseStatements: pragmaBoolean [
 
 { #category : #'private-parsing' }
 TPRBParser >> parseStatements: pragmaBoolean into: aSequenceNode [
-	| temps leftBar rightBar errorNode errorValue |
+	| temps leftBar rightBar errorNode |
 	temps := #().
 	leftBar := rightBar := nil.
 	currentToken isBinary 
@@ -895,11 +900,10 @@ TPRBParser >> parseStatements: pragmaBoolean into: aSequenceNode [
 					temps := self parseTemps.
 					(currentToken isBinary and: [currentToken value = #|]) 
 						ifFalse: [ errorNode := self parserError: '''|'' expected'.
-									  errorValue := '| '.
-									  (temps collect: [:each | each formattedCode, ' ']) 
-											do: [:code | errorValue := errorValue, code].
-									  errorNode value: errorValue, errorNode value.
+									  errorNode value: '| '.
+									  temps do: [:each | errorNode value: errorNode value, each formattedCode, ' '].
 									  errorNode start: leftBar.
+									  errorNode stop: currentToken stop.
 									 aSequenceNode addFaultyNode: errorNode.
 									 temps := #().
 									 leftBar := nil.

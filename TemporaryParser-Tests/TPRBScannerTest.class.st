@@ -22,58 +22,67 @@ TPRBScannerTest >> testCommentTokenHasTheRightValue [
 	| scanner token |
 	scanner := self buildScannerForText: String tab, ' "simple comment" firstToken'.
 	token := scanner next comments first.
-	self assert: token isComment.
 	self assert: token value equals: '"simple comment"'.
 	
 	scanner := self buildScannerForText: String tab, ' """nested at beggining"" comment" firstToken'.
 	token := scanner next comments first.
-	self assert: token isComment.
 	self assert: token value equals: '"""nested at beggining"" comment"'.
 	
 	scanner := self buildScannerForText: String tab, ' "comment ""nested at end""" firstToken'.
 	token := scanner next comments first.
-	self assert: token isComment.
 	self assert: token value equals: '"comment ""nested at end"""'.
 	
 ]
 
 { #category : #testComment }
 TPRBScannerTest >> testCommentTokenStartAtFirstQuote [
-	| scanner token |
-	scanner := self buildScannerForText: ' "simple comment" firstToken'.
+	| scanner token str comment |
+	str := ' "simple comment" firstToken'.
+	comment := '"simple comment"'.
+	scanner := self buildScannerForText: str.
 	token := scanner next comments first.
 	self assert: token isComment.
-	self assert: token start equals: 2.
+	self assert: token start equals: (str findString: comment).
 	
-	scanner := self buildScannerForText: ' """nested at beggining"" comment" firstToken'.
+	str := ' """nested at beggining"" comment" firstToken'.
+	comment := '"""nested at beggining"" comment"'.
+	scanner := self buildScannerForText: str .
 	token := scanner next comments first.
 	self assert: token isComment.
-	self assert: token start equals: 2.
+	self assert: token start equals: (str findString: comment).
 	
-	scanner := self buildScannerForText: '"comment ""nested at end""" firstToken'.
+	str := '"comment ""nested at end""" firstToken'.
+	comment := '"comment ""nested at end"""'.
+	scanner := self buildScannerForText: str.
 	token := scanner next comments first.
 	self assert: token isComment.
-	self assert: token start equals: 1.
+	self assert: token start equals: (str findString: comment).
 	
 ]
 
 { #category : #testComment }
 TPRBScannerTest >> testCommentTokenStopAtLastQuote [
-	| scanner token |
-	scanner := self buildScannerForText: ' "simple comment" firstToken'.
+	| scanner token str comment |
+	str := ' "simple comment" firstToken'.
+	comment := '"simple comment"'.
+	scanner := self buildScannerForText: str.
 	token := scanner next comments first.
 	self assert: token isComment.
-	self assert: token stop equals: 17.
+	self assert: token stop equals: (str findString: comment) + comment size - 1.
 	
-	scanner := self buildScannerForText: ' """nested at beggining"" comment" firstToken'.
+	str := ' """nested at beggining"" comment" firstToken'.
+	comment := '"""nested at beggining"" comment"'.
+	scanner := self buildScannerForText: str .
 	token := scanner next comments first.
 	self assert: token isComment.
-	self assert: token stop equals: 34.
+	self assert: token stop equals: (str findString: comment) + comment size - 1.
 	
-	scanner := self buildScannerForText: '"comment ""nested at end""" firstToken'.
+	str := '"comment ""nested at end""" firstToken'.
+	comment := '"comment ""nested at end"""'.
+	scanner := self buildScannerForText: str.
 	token := scanner next comments first.
 	self assert: token isComment.
-	self assert: token stop equals: 27.
+	self assert: token stop equals: (str findString: comment) + comment size - 1.
 	
 ]
 
@@ -108,7 +117,7 @@ TPRBScannerTest >> testNextAcceptFloatNumbers [
 	self assert: token isNumberLiteralToken.
 ]
 
-{ #category : #testLiteral }
+{ #category : #testSpecialCharacters }
 TPRBScannerTest >> testNextAcceptLiteralArrayWithBracket [
 	"Note: RBScanner only spots the beginning of the array."
 	| scanner token |
@@ -118,7 +127,7 @@ TPRBScannerTest >> testNextAcceptLiteralArrayWithBracket [
 	self assert: token isLiteralArrayToken.
 ]
 
-{ #category : #testLiteral }
+{ #category : #testSpecialCharacters }
 TPRBScannerTest >> testNextAcceptLiteralArrayWithParenthesis [
 	"Note: RBScanner only spots the beginning of the array."
 	| scanner token |
@@ -180,6 +189,22 @@ TPRBScannerTest >> testNextAlphabeticsAndDigitGiveIdentifier [
 	token := scanner next.
 	self assert: token isIdentifier.
 	
+]
+
+{ #category : #testStart }
+TPRBScannerTest >> testNextAssignementStartAtColon [
+	| scanner token |
+	scanner := self buildScannerForText: ':='.
+	token := scanner next.
+	self assert: token start equals: 1.
+]
+
+{ #category : #testStop }
+TPRBScannerTest >> testNextAssignementStopAtEqual [
+	| scanner token |
+	scanner := self buildScannerForText: ':='.
+	token := scanner next.
+	self assert: token stop equals: 2.
 ]
 
 { #category : #testError }
@@ -282,6 +307,23 @@ TPRBScannerTest >> testNextBinarySelectorValueIsBinary [
 	self assert: token value equals: '+'.
 ]
 
+{ #category : #testComment }
+TPRBScannerTest >> testNextCommentIsCommentToken [
+	| scanner token |
+	scanner := self buildScannerForText: String tab, ' "simple comment" firstToken'.
+	token := scanner next comments first.
+	self assert: token isComment.
+	
+	scanner := self buildScannerForText: String tab, ' """nested at beggining"" comment" firstToken'.
+	token := scanner next comments first.
+	self assert: token isComment.
+	
+	scanner := self buildScannerForText: String tab, ' "comment ""nested at end""" firstToken'.
+	token := scanner next comments first.
+	self assert: token isComment.
+	
+]
+
 { #category : #testSeparators }
 TPRBScannerTest >> testNextDoesNotAddLineBreakToComments [
 	| scanner token |
@@ -311,13 +353,27 @@ TPRBScannerTest >> testNextDoesNotAddTabToComments [
 ]
 
 { #category : #testError }
-TPRBScannerTest >> testNextDollarSignCanNotStandAlone [
+TPRBScannerTest >> testNextDollarSignErrorHasNoValue [
+	| scanner token |
+	scanner := self buildScannerForText: '$'.
+	token := scanner next.
+	self assert: token value equals: ''.
+]
+
+{ #category : #testError }
+TPRBScannerTest >> testNextDollarSignExpectedACharacter [
+	| scanner token |
+	scanner := self buildScannerForText: '$'.
+	token := scanner next.
+	self assert: token cause equals: 'A Character was expected'.
+]
+
+{ #category : #testError }
+TPRBScannerTest >> testNextDollarSignIsError [
 	| scanner token |
 	scanner := self buildScannerForText: '$'.
 	token := scanner next.
 	self assert: token isError.
-	self assert: token value equals: ''.
-	self assert: token cause equals: 'A Character was expected'.
 ]
 
 { #category : #testSeparators }
@@ -329,6 +385,32 @@ TPRBScannerTest >> testNextEOFContainsCommentsWhenNoOtherToken [
 	self assert: token isEOF.
 	self assert: token comments size equals: 1.
 	self assert: token start equals: 16.
+]
+
+{ #category : #testStart }
+TPRBScannerTest >> testNextErrorStartAtFirstCharacter [
+	| scanner token |
+	scanner := self buildScannerForText: '$'.
+	token := scanner next.
+	self assert: token start equals: 1.
+	
+	scanner := self buildScannerForText: '#123alpha'.
+	token := scanner next.
+	self assert: token isError.
+	self assert: token start equals: 1.
+]
+
+{ #category : #testStop }
+TPRBScannerTest >> testNextErrorStopAtErrorCharacter [
+	| scanner token |
+	scanner := self buildScannerForText: '$'.
+	token := scanner next.
+	self assert: token stop equals: 1.
+	
+	scanner := self buildScannerForText: '#123alpha'.
+	token := scanner next.
+	self assert: token isError.
+	self assert: token stop equals: 2.
 ]
 
 { #category : #testLiteral }
@@ -672,6 +754,63 @@ TPRBScannerTest >> testNextKeywordValueIsStartToStop [
 	
 ]
 
+{ #category : #testSpecialCharacters }
+TPRBScannerTest >> testNextLiteralArrayHasRightValue [
+	"Note: RBScanner only spots the beginning of the array."
+	| scanner token |
+	
+	scanner := self buildScannerForText: '#['.
+	token := scanner next.
+	self assert: token value equals: '#['.
+]
+
+{ #category : #testStart }
+TPRBScannerTest >> testNextLiteralArrayWithBracketStartAtHashtag [
+	"Note: RBScanner only spots the beginning of the array."
+	| scanner token |
+	
+	scanner := self buildScannerForText: '#['.
+	token := scanner next.
+	self assert: token start equals: 1.
+]
+
+{ #category : #testStop }
+TPRBScannerTest >> testNextLiteralArrayWithBracketStopAtBracket [
+	"Note: RBScanner only spots the beginning of the array."
+	| scanner token |
+	
+	scanner := self buildScannerForText: '#['.
+	token := scanner next.
+	self assert: token stop equals: 2.
+]
+
+{ #category : #testSpecialCharacters }
+TPRBScannerTest >> testNextLiteralArrayWithParenthesisHasRigthValue [
+	"Note: RBScanner only spots the beginning of the array."
+	| scanner token |
+	scanner := self buildScannerForText: '#('.
+	token := scanner next.
+	self assert: token value equals: '#('.
+]
+
+{ #category : #testStart }
+TPRBScannerTest >> testNextLiteralArrayWithParenthesisStartAtHashTag [
+	"Note: RBScanner only spots the beginning of the array."
+	| scanner token |
+	scanner := self buildScannerForText: '#('.
+	token := scanner next.
+	self assert: token start equals: 1.
+]
+
+{ #category : #testStop }
+TPRBScannerTest >> testNextLiteralArrayWithParenthesisStopAtParenthesis [
+	"Note: RBScanner only spots the beginning of the array."
+	| scanner token |
+	scanner := self buildScannerForText: '#('.
+	token := scanner next.
+	self assert: token stop equals: 2.
+]
+
 { #category : #testError }
 TPRBScannerTest >> testNextLiteralBeginningWithApostropheThrowsError [
 	| scanner token |
@@ -946,6 +1085,52 @@ TPRBScannerTest >> testNextNilIsLiteral [
 	self assert: token value equals: nil.
 ]
 
+{ #category : #testStart }
+TPRBScannerTest >> testNextNumberLiteralStartAtTheBeginning [
+	
+	| scanner token |
+	scanner := self buildScannerForText: '-10r10'.
+	token := scanner next.
+	self assert: token start equals: 1.
+	
+	scanner := self buildScannerForText: '-2r1010'.
+	token := scanner next.
+	self assert: token start equals: 1.
+	
+	scanner := self buildScannerForText: '-16ra'.
+	token := scanner next.
+	self assert: token start equals: 1.
+	
+	scanner := self buildScannerForText: '-8r12'.
+	token := scanner next.
+	self assert: token start equals: 1.
+]
+
+{ #category : #testStop }
+TPRBScannerTest >> testNextNumberLiteralStopAtTheLastDigit [
+	
+	| scanner token expr |
+	expr := '-10r10'.
+	scanner := self buildScannerForText: expr.
+	token := scanner next.
+	self assert: token stop equals: expr size.
+	
+	expr := '-2r1010'.
+	scanner := self buildScannerForText: expr.
+	token := scanner next.
+	self assert: token stop equals: expr size.
+	
+	expr := '-16ra'.
+	scanner := self buildScannerForText: expr.
+	token := scanner next.
+	self assert: token stop equals: expr size.
+	
+	expr := '-8r12'.
+	scanner := self buildScannerForText: expr.
+	token := scanner next.
+	self assert: token stop equals: expr size.
+]
+
 { #category : #testNumberLiteral }
 TPRBScannerTest >> testNextRadixNumbersCanBeFloatAsWell [
 	
@@ -1005,12 +1190,48 @@ TPRBScannerTest >> testNextSecondTokenDoesNotConsumePrecedingComment [
 	self assert: token start equals: 36.
 ]
 
+{ #category : #testStart }
+TPRBScannerTest >> testNextSpecialCharacterStartAtTheBeginning [
+	| scanner token |
+	scanner := self buildScannerForText: '(]'.
+	token := scanner next.
+	self assert: token start equals: 1.
+	
+	scanner := self buildScannerForText: '^('.
+	token := scanner next.
+	token := scanner next.
+	self assert: token start equals: 2.
+	
+	scanner := self buildScannerForText: ']'.
+	token := scanner next.
+	self assert: token start equals: 1.
+	
+]
+
+{ #category : #testStop }
+TPRBScannerTest >> testNextSpecialCharacterStopAtThemself [
+	| scanner token |
+	scanner := self buildScannerForText: '(]'.
+	token := scanner next.
+	self assert: token stop equals: 1.
+	
+	scanner := self buildScannerForText: '^('.
+	token := scanner next.
+	token := scanner next.
+	self assert: token stop equals: 2.
+	
+	scanner := self buildScannerForText: ']'.
+	token := scanner next.
+	self assert: token stop equals: 1.
+	
+]
+
 { #category : #testSpecialCharacters }
 TPRBScannerTest >> testNextSpecialCharactereCanBeAssignement [
 	| scanner token |
 	scanner := self buildScannerForText: ':='.
 	token := scanner next.
-	self assert: token isAssignment.
+	self assert: token start equals: 1.
 ]
 
 { #category : #testSpecialCharacters }

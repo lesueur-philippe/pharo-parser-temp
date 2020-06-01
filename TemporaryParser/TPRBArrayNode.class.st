@@ -135,7 +135,8 @@ TPRBArrayNode >> indexOfNode: aNode [
 { #category : #initialization }
 TPRBArrayNode >> initialize [
 	super initialize.
-	statements := periods := #().
+	statements := OrderedCollection new.
+	periods := #().
 	left := right := 0.
 ]
 

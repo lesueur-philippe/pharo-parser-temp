@@ -135,3 +135,11 @@ TPClyMethodCreationToolMorph >> setUpTargetClasses [
 	(targetClasses includes: methodClass) ifFalse: [ 
 		targetClasses := {methodClass}, targetClasses ]
 ]
+
+{ #category : #'events handling' }
+TPClyMethodCreationToolMorph >> textChanged: aTextChanged [
+	| ast |
+	super textChanged: aTextChanged.
+	ast := TPRBParser parseFaultyMethod: self pendingText.
+	TPIconStyler styleText: textModel withAst: ast.
+]
