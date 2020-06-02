@@ -462,9 +462,12 @@ TPRBParser >> parseCascadeMessage [
 
 { #category : #'error handling' }
 TPRBParser >> parseErrorNode: aMessageString [
-	| errorPosition |
+	| errorPosition|
 	currentToken isError
-		ifTrue: [ ^ TPRBParseErrorNode errorMessage: currentToken cause value: currentToken value at: currentToken start ].
+		ifTrue: [ | errorNode| 
+				    errorNode := TPRBParseErrorNode errorMessage: currentToken cause value: currentToken value at: currentToken start.
+					 self step.
+					 ^errorNode].
 	errorPosition := self errorPosition.
 	"""the error at the end means in some cases that the start of the error is before""
 	aMessageString = ''')'' expected'
@@ -843,7 +846,7 @@ TPRBParser >> parseStatementList: pragmaBoolean into: sequenceNode [
 		[periods add: currentToken start.
 		self step].
 	[self atEnd 
-		or: [currentToken isSpecial and: ['])}' includes: currentToken value]]] 
+		or: [currentToken isSpecial and: ['])}' includes: currentToken value] ]] 
 			whileFalse: [
 				return ifTrue: [ 
 					(self parserError: 'End of statement list encountered') 
