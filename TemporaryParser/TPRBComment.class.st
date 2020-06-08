@@ -58,6 +58,12 @@ TPRBComment class >> with: aString at: startPosition [
 	
 ]
 
+{ #category : #comparing }
+TPRBComment >> = anObject [
+	(self == anObject) ifTrue: [ ^true ].
+	^ (self class = anObject class) ifTrue: [ (self contents = anObject contents) and: [ self start = anObject start ] ] ifFalse: [ false ]
+]
+
 { #category : #visiting }
 TPRBComment >> acceptVisitor: aProgramNodeVisitor [
 	"At some point we will have to think what we do to visit comment. 
@@ -104,11 +110,6 @@ TPRBComment >> start [
 { #category : #accessing }
 TPRBComment >> stop [
 	^ stop
-]
-
-{ #category : #'as yet unclassified' }
-TPRBComment >> toto [
-	^self
 ]
 
 { #category : #initialization }

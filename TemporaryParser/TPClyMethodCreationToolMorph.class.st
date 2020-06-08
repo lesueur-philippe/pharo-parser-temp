@@ -141,5 +141,6 @@ TPClyMethodCreationToolMorph >> textChanged: aTextChanged [
 	| ast |
 	super textChanged: aTextChanged.
 	ast := TPRBParser parseFaultyMethod: self pendingText.
+	textMorph segments copy do: #delete.
 	TPIconStyler styleText: textModel withAst: ast.
 ]

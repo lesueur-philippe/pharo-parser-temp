@@ -93,13 +93,28 @@ TPRBVariableNode >> initialize [
 ]
 
 { #category : #testing }
+TPRBVariableNode >> isArgument [
+	^ false
+]
+
+{ #category : #testing }
 TPRBVariableNode >> isDefinition [
 	^self parent isSequence and: [ self parent defines: name ]
 ]
 
 { #category : #testing }
+TPRBVariableNode >> isGlobal [
+	^false
+]
+
+{ #category : #testing }
 TPRBVariableNode >> isImmediateNode [
 	^true
+]
+
+{ #category : #testing }
+TPRBVariableNode >> isInstance [
+	^false
 ]
 
 { #category : #testing }
@@ -121,6 +136,16 @@ TPRBVariableNode >> isSuper [
 	since we do not control this."
 	
 	^ self name = 'super'
+]
+
+{ #category : #testing }
+TPRBVariableNode >> isTemp [
+	^ false
+]
+
+{ #category : #testing }
+TPRBVariableNode >> isThisContext [
+	^ false
 ]
 
 { #category : #testing }

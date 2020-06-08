@@ -30,7 +30,7 @@ TPErrorNodeStyler >> borderColor [
 
 { #category : #defaults }
 TPErrorNodeStyler >> highlightColor [
-	^(Color gray alpha: 0.2)
+	^nil
 ]
 
 { #category : #defaults }
