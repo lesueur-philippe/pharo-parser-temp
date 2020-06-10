@@ -189,6 +189,11 @@ TPIconStyler >> visitReturnNode: aReturnNode [
 ]
 
 { #category : #visiting }
+TPIconStyler >> visitSelectorNode: aSelectorNode [
+	self addIconStyle: aSelectorNode
+]
+
+{ #category : #visiting }
 TPIconStyler >> visitSelfNode: aSelfNode [ 
 	self addIconStyle: aSelfNode.
 	super visitSelfNode: aSelfNode 

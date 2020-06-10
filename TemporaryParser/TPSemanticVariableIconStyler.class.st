@@ -1,11 +1,11 @@
 Class {
-	#name : #TPSemanticIconStyler,
+	#name : #TPSemanticVariableIconStyler,
 	#superclass : #TPIconStyler,
 	#category : #TemporaryParser
 }
 
 { #category : #styling }
-TPSemanticIconStyler >> addIconStyle: aNode from: start to: stop color: aColor [
+TPSemanticVariableIconStyler >> addIconStyle: aNode from: start to: stop color: aColor [
 	|conf|
 	(self shouldStyleNode: aNode) ifFalse: [ ^self ].
 	conf := RubConfigurationChange new.
@@ -24,27 +24,27 @@ TPSemanticIconStyler >> addIconStyle: aNode from: start to: stop color: aColor [
 ]
 
 { #category : #defaults }
-TPSemanticIconStyler >> borderColor [ 
+TPSemanticVariableIconStyler >> borderColor [ 
 	^Color red
 ]
 
 { #category : #defaults }
-TPSemanticIconStyler >> highlightColor [
+TPSemanticVariableIconStyler >> highlightColor [
 	^(Color red alpha: 0.2)
 ]
 
 { #category : #defaults }
-TPSemanticIconStyler >> iconFor: aNode [
+TPSemanticVariableIconStyler >> iconFor: aNode [
 	^ self iconNamed: #warning
 ]
 
 { #category : #defaults }
-TPSemanticIconStyler >> iconLabel: aNode [
+TPSemanticVariableIconStyler >> iconLabel: aNode [
 	^ aNode name printString, ' is not a known variable '.
 ]
 
 { #category : #testing }
-TPSemanticIconStyler >> shouldStyleNode: aNode [
+TPSemanticVariableIconStyler >> shouldStyleNode: aNode [
 	^ aNode isVariable and: 
 		[ aNode binding isUndeclared ].
 ]

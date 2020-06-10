@@ -40,7 +40,7 @@ TPErrorNodeStyler >> iconFor: aNode [
 
 { #category : #defaults }
 TPErrorNodeStyler >> iconLabel: aNode [
-	^ aNode errorMessage, ' for: ', aNode value.
+	^ aNode errorMessage, ' instead of : ', aNode value.
 ]
 
 { #category : #visiting }
