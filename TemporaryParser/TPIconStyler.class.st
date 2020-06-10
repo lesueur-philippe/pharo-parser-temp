@@ -217,3 +217,9 @@ TPIconStyler >> visitThisContextNode: aThisContextNode [
 	self addIconStyle: aThisContextNode.
 	super visitThisContextNode: aThisContextNode.
 ]
+
+{ #category : #visiting }
+TPIconStyler >> visitVariableNode: aNode [ 
+	self addIconStyle: aNode.
+	super visitVariableNode: aNode.
+]

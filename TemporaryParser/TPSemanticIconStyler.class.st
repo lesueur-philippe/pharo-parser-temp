@@ -46,5 +46,5 @@ TPSemanticIconStyler >> iconLabel: aNode [
 { #category : #testing }
 TPSemanticIconStyler >> shouldStyleNode: aNode [
 	^ aNode isVariable and: 
-		[ (aNode isTemp | aNode isArgument | aNode isGlobal | aNode isInstance | aNode isSelf | aNode isSuper | aNode isThisContext) not]
+		[ aNode binding isUndeclared ].
 ]

@@ -138,9 +138,16 @@ TPClyMethodCreationToolMorph >> setUpTargetClasses [
 
 { #category : #'events handling' }
 TPClyMethodCreationToolMorph >> textChanged: aTextChanged [
-	| ast |
+	| ast compilationContext compilationContextOptions |
 	super textChanged: aTextChanged.
 	ast := TPRBParser parseFaultyMethod: self pendingText.
+	compilationContext := OpalCompiler new compilationContext.
+	compilationContextOptions := CompilationContext defaultOptions copy.
+	compilationContextOptions add: #optionSkipSemanticWarnings.
+	compilationContext setOptions: compilationContextOptions.
+	compilationContext semanticAnalyzerClass new
+   compilationContext: compilationContext;
+   analyze: ast.
 	textMorph segments copy do: #delete.
 	TPIconStyler styleText: textModel withAst: ast.
 ]

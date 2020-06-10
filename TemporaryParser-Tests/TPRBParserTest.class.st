@@ -387,6 +387,21 @@ TPRBParserTest >> testErrorNodeForBadParenthesesHasRightMessage [
 ]
 
 { #category : #'error testing' }
+TPRBParserTest >> testErrorNodeForBadParenthesesIsEnglobing [
+	| tree |
+	tree := self parseFaultyExpression: '( faulty parentheses message node'.
+	self assert: tree isEnglobingError.
+]
+
+{ #category : #'error testing' }
+TPRBParserTest >> testErrorNodeForBadParenthesesOfLiteralArrayIsEnglobingNode [
+	| tree expr |
+	expr := '#( faulty parentheses litteral array node'.
+	tree := self parseFaultyExpression: expr.
+	self assert: tree isEnglobingError.
+]
+
+{ #category : #'error testing' }
 TPRBParserTest >> testErrorNodeForBadParenthesesStartAtFirstParenthese [
 	| tree |
 	tree := self parseFaultyExpression: '( faulty parentheses message node'.

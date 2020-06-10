@@ -460,6 +460,15 @@ TPRBParser >> parseCascadeMessage [
 	^self cascadeNodeClass messages: messages semicolons: semicolons
 ]
 
+{ #category : #parsing }
+TPRBParser >> parseEnglobingErrorWith: aCollection [
+
+	| errorNode |
+	errorNode := TPRBEnglobingErrorNode withValue: aCollection from: currentToken.
+	self step.
+	^errorNode 
+]
+
 { #category : #'error handling' }
 TPRBParser >> parseErrorNode: aMessageString [
 	| errorPosition|

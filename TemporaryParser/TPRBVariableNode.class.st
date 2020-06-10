@@ -103,18 +103,8 @@ TPRBVariableNode >> isDefinition [
 ]
 
 { #category : #testing }
-TPRBVariableNode >> isGlobal [
-	^false
-]
-
-{ #category : #testing }
 TPRBVariableNode >> isImmediateNode [
 	^true
-]
-
-{ #category : #testing }
-TPRBVariableNode >> isInstance [
-	^false
 ]
 
 { #category : #testing }
