@@ -954,15 +954,13 @@ TPRBParserTest >> testParseExpressionGivesTheWriteAmountOfStatements [
 
 { #category : #'tests parsing faulty' }
 TPRBParserTest >> testParseFaultyBlock [
-	| node blockNoArgButBar blockNoArgButColon unfinishedBlock |
+	| node blockNoArgButBar blockNoArgButColon |
 	"parsing block should mark this block as faulty, if it is unfinished no closing brace, or missing parts (colon but no arg, 
 	no arg but vertical bar)"
 	blockNoArgButBar := '[ | ]'.
 	blockNoArgButColon := '[ : ]'.
-	unfinishedBlock := '[  '.
 	{blockNoArgButBar.
-	blockNoArgButColon.
-	unfinishedBlock}
+	blockNoArgButColon.}
 		do: [ :faultyExpression | 
 			node := self parseFaultyExpression: faultyExpression.
 			self assert: node isBlock.
@@ -978,9 +976,8 @@ TPRBParserTest >> testParseFaultyLiteral [
 	faultyLiteral := '¿'.
 	faultyLiteralArray  := '#(¿)'.
 	node := self parseFaultyExpression: faultyLiteral.
-	self assert: node isFaulty.
-	self assert: node isSequence.
-	self assert: node statements first errorMessage equals: 'Unknown character'.	
+	self assert: node isParseError.
+	self assert: node errorMessage equals: 'Unknown character'.	
 	node := self parseFaultyExpression: faultyLiteralArray.
 	self assert: node isFaulty.
 	self assert: node isLiteralArray.	
@@ -1186,12 +1183,16 @@ indicate the invalid expression."
 	unfinishedBlockWithReturnExp := '[^ '.
 	validBlock := '[:x | x missingArg: 3 ]. '.
 	
-	{unfinishedBlockExp. missingArgExp. unfinishedBlockAndMissingArgExp. unfinishedBlockWithReturnExp}
+	{unfinishedBlockExp. unfinishedBlockAndMissingArgExp. unfinishedBlockWithReturnExp}
 		do: [ :faultyExpression | 
 			node := self parseFaultyExpression: faultyExpression.
-			self assert: node isBlock.
-			self assert: node isFaulty.
-			self assert: node body isFaulty ].
+			self assert: node isEnglobingError.
+			self assert: node isBlockError ].
+		
+	node := self parseFaultyExpression: missingArgExp.
+	self assert: node isBlock.
+	self assert: node isFaulty.
+	self assert: node body isFaulty.
 		
 	node := self parseFaultyExpression: validBlock.
 	self assert: node isBlock.
@@ -1538,24 +1539,23 @@ TPRBParserTest >> testUnclosedArrayErrorNodeContainsRightValue [
 	| tree |
 	tree := self parseFaultyExpression: '{ faulty parentheses message node'.
 	self assert: tree isParseError.
-	self assert: tree value equals: '{faulty parentheses message node'
+	self assert: tree value equals: '{ faulty parentheses message node '
 ]
 
 { #category : #'error testing' }
 TPRBParserTest >> testUnclosedBracketErrorNodeContainsRightValue [
-	| tree errorNode |
+	| tree |
 	tree := self parseFaultyExpression: '[ faulty parentheses message node'.
-	errorNode := tree statements second.
-	self assert: errorNode isFaulty.
-	self assert: errorNode value equals: '[ faulty parentheses message node'
+	self assert: tree isEnglobingError.
+	self assert: tree value equals: '[ faulty parentheses message node '
 ]
 
 { #category : #'error testing' }
 TPRBParserTest >> testUnclosedParenthesesErrorNodeContainsRightValue [
 	| tree |
 	tree := self parseFaultyExpression: '( faulty parentheses message node'.
-	self assert: tree isFaulty.
-	self assert: tree value equals: '( faulty parentheses message node'
+	self assert: tree isEnglobingError.
+	self assert: tree value equals: '( faulty parentheses message node '
 ]
 
 { #category : #'garbage tests' }
@@ -1568,7 +1568,7 @@ TPRBParserTest >> testUnclosedParenthesesRaiseSyntaxError [
 TPRBParserTest >> testUnclosedTemporariesErrorNodeContainsRightValue [
 	| tree |
 	tree := self parseFaultyExpression: '| faulty temporaries'.
-	self assert: tree isFaulty.
+	self assert: tree isEnglobingError.
 	self assert: tree value equals: '| faulty temporaries '
 ]
 

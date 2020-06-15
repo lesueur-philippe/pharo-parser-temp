@@ -10,17 +10,13 @@ TPSemanticMessageIconStyler >> addIconStyle: aNode from: start to: stop color: a
 	(self shouldStyleNode: aNode) ifFalse: [ ^self ].
 	conf := RubConfigurationChange new.
 	conf configurationBlock: [ :text| |r| 
-		aNode selectorParts
-		with: aNode keywordsPositions
-		do: [ :keyword :position | 
-		r := RubTextBackgroundColorSegmentMorph from: position to: position + keyword size.
-		text addSegment: r].
-		
+		r := RubTextBackgroundColorSegmentMorph from: aNode start to: aNode stop + 1.
+		text addSegment: r.
+		r color: aColor.
+		r borderColor: self borderColor.
 		r label: (self iconLabelBlock: aNode).
 		r icon: (self iconFor: aNode).
 		r iconBlock: (self iconBlock: aNode).
-		r color: aColor.
-		r borderColor: self borderColor.
 	].
 
 	textModel announce: conf.
@@ -33,7 +29,7 @@ TPSemanticMessageIconStyler >> borderColor [
 
 { #category : #defaults }
 TPSemanticMessageIconStyler >> highlightColor [
-	^(Color brown alpha: 0.2)
+	^(Color lightOrange alpha: 0.2)
 ]
 
 { #category : #defaults }

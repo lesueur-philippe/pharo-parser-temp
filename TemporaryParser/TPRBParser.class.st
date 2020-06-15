@@ -23,7 +23,8 @@ Class {
 		'errorBlock',
 		'source',
 		'comments',
-		'pragmas'
+		'pragmas',
+		'englobingError'
 	],
 	#category : #'TemporaryParser-Parser'
 }
@@ -190,6 +191,11 @@ TPRBParser >> currentToken [
 	^currentToken 
 ]
 
+{ #category : #'private-classes' }
+TPRBParser >> englobingErrorNodeClass [ 
+	^TPRBEnglobingErrorNode
+]
+
 { #category : #'error handling' }
 TPRBParser >> errorBlock [
 	^errorBlock ifNil: [[:message :position | ]] ifNotNil: [errorBlock]
@@ -269,18 +275,15 @@ TPRBParser >> parseArgs [
 { #category : #'private-parsing' }
 TPRBParser >> parseArray [
 	"Although an array node represents an array, it is not an Array-like object."
-	| position node |
-	position := currentToken start.
+	| startToken node |
+	startToken := currentToken.
 	self step.
 	node := self arrayNodeClass new.
-	node left: position.
+	node left: startToken start.
 	self parseStatementList: false  into: node.
 	(currentToken isSpecial and: [currentToken value = $}]) 
-		ifFalse: [ | errorCode | errorCode := node formattedCode.
-					  ^ (self parserError: 'expected }') 
-							value: (errorCode truncateTo: errorCode size-1); 
-							start: node left; 
-							stop: node statements last stop.].
+		ifFalse: [ ^errorBlock ifNil: [ self parserError: '''}'' expected']
+					  				  ifNotNil: [ self parseEnglobingError: node statements with: startToken]].
 	node right: currentToken start.
 	self step.
 	^ node
@@ -358,22 +361,19 @@ TPRBParser >> parseBinaryPragma [
 
 { #category : #'private-parsing' }
 TPRBParser >> parseBlock [
-	| position node errorNode |
-	position := currentToken start.
+	| startToken node |
+	startToken := currentToken.
 	self step.
 	node := self blockNodeClass new. 
 	self parseBlockArgsInto: node.
 	self addCommentsTo: node.		
-	node left: position.
+	node left: startToken start.
 	node body: self sequenceNodeClass new.
 	(self parseStatements: false into: node body).
 	
 	(currentToken isSpecial and: [currentToken value = $]])
-		ifFalse: [ errorNode := self parserError: ''']'' expected'.
-			errorNode value: '[ ', node body formattedCode.
-			errorNode stop: currentToken stop. 
-			node body addFaultyNode: errorNode.
-			^ node].
+		ifFalse: [ ^errorBlock ifNil: [ self parserError: ''']'' expected']
+					  				  ifNotNil: [ self parseEnglobingError: node body statements with: startToken]].
 	node right: currentToken start.
 	self step.
 	^node
@@ -461,12 +461,8 @@ TPRBParser >> parseCascadeMessage [
 ]
 
 { #category : #parsing }
-TPRBParser >> parseEnglobingErrorWith: aCollection [
-
-	| errorNode |
-	errorNode := TPRBEnglobingErrorNode withValue: aCollection from: currentToken.
-	self step.
-	^errorNode 
+TPRBParser >> parseEnglobingError: aCollection with: aToken [
+	^ self englobingErrorNodeClass error: aToken withNodes: aCollection.
 ]
 
 { #category : #'error handling' }
@@ -478,11 +474,6 @@ TPRBParser >> parseErrorNode: aMessageString [
 					 self step.
 					 ^errorNode].
 	errorPosition := self errorPosition.
-	"""the error at the end means in some cases that the start of the error is before""
-	aMessageString = ''')'' expected'
-		ifTrue: [ errorPosition := source findLastOccurrenceOfString: '(' startingAt: 1 ].
-	aMessageString = '''|'' expected'
-		ifTrue: [ errorPosition := source findLastOccurrenceOfString: '|' startingAt: 1 ]."
 	(errorPosition = 0) ifTrue: [ errorPosition := self errorPosition].
 	^ TPRBParseErrorNode errorMessage: aMessageString value: currentToken value asString at: errorPosition
 ]
@@ -509,7 +500,7 @@ TPRBParser >> parseIncompleteExpression: priorStatementsNode [
 		ifTrue: [ priorStatementsNode ]
 		ifFalse:
 			[ | errorNode |
-			errorNode := self parserError: 'Unknown input at end'.
+			errorNode := self parserError: 'Unknown input at end 21'.
 			errorNode ifNotNil: [ priorStatementsNode statements: priorStatementsNode statements , {errorNode} ].
 			priorStatementsNode ]
 ]
@@ -585,21 +576,19 @@ TPRBParser >> parseKeywordPragma [
 
 { #category : #'private-parsing' }
 TPRBParser >> parseLiteralArray [
-	| literals start stop errorNode |
-	start := currentToken start.
+	| literals startToken stop |
+	startToken := currentToken.
 	literals := (OrderedCollection new: 5).
 	self step.
 	[self atEnd or: [currentToken isSpecial and: [currentToken value = $)]]] 
 		whileFalse: [literals add: self parseLiteralArrayObject].
 	stop := currentToken stop.
 	(currentToken isSpecial and: [currentToken value = $)]) 
-		ifFalse: [ errorNode := ((self parserError: ''')'' expected') start: start; stop: stop).
-					  errorNode value: '#( '.
-					  literals do: [:node | errorNode value: errorNode value, node formattedCode,' '].
-					  ^errorNode].
+		ifFalse: [ ^errorBlock ifNil: [ self parserError: ''')'' expected']
+					  				  ifNotNil: [ self parseEnglobingError: literals with: startToken]].
 	self step.
 	^self literalArrayNodeClass 
-		startPosition: start
+		startPosition: startToken start
 		contents: literals
 		stopPosition: stop
 		isByteArray: false
@@ -617,7 +606,7 @@ TPRBParser >> parseLiteralArrayObject [
 				ifTrue: [self parseLiteralByteArray]
 				ifFalse: [self parseLiteralArray]].
 	currentToken isError ifTrue:[ |errorNode| errorNode :=  self parserError: currentToken cause.
-		self step. ^ errorNode].
+		 ^ errorNode].
 	currentToken isLiteralToken ifFalse: [self patchLiteralArrayToken].
 	^self parsePrimitiveLiteral
 ]
@@ -626,19 +615,20 @@ TPRBParser >> parseLiteralArrayObject [
 TPRBParser >> parseLiteralByteArray [
 	"Current token is litteral array token #[ which means following tokens are part of the array 
 	 until the encounter of the special character ] ."
-	| stream start stop |
-	start := currentToken start.
+	| stream startToken stop |
+	startToken := currentToken.
 	stream := (Array new: 5) writeStream.
 	self step.
 	[self atEnd or: [currentToken isSpecial and: [currentToken value = $]]]] 
 		"Put literal value nodes corresponding to the bytes in the stream."
 		whileFalse: [stream nextPut: self parseLiteralByteArrayObject].
 	(currentToken isSpecial and: [currentToken value = $]]) 
-		ifFalse: [^ self parserError: ''']'' expected'].
+		ifFalse: [ ^self errorBlock ifNil: [ self parserError: ''']'' expected']
+					  						 ifNotNil: [ self parseEnglobingError: stream contents with: startToken]].
 	stop := currentToken stop.
 	self step.
 	^self literalArrayNodeClass 
-		startPosition: start
+		startPosition: startToken start
 		contents: stream contents
 		stopPosition: stop
 		isByteArray: true
@@ -665,7 +655,7 @@ TPRBParser >> parseLiterals: aString [
 	[self atEnd or: [currentToken isSpecial and: [currentToken value = $)]]] 
 		whileFalse: [stream nextPut: self parseLiteralArrayObject].
 	
-	self atEnd ifFalse: [ ^ self parserError: 'Unknown input at end'].
+	self atEnd ifFalse: [ ^ self parserError: 'Unknown input at end '].
 	
 	^stream contents collect: [ :each | each value ]
 ]
@@ -727,28 +717,30 @@ TPRBParser >> parseNumberLiteral [
 
 { #category : #'private-parsing' }
 TPRBParser >> parseParenthesizedExpression [
-	| leftParen node |
-	leftParen := currentToken start.
+	| node startToken |
+	startToken := currentToken.
 	self step.
 	node := self parseAssignment.
 	^(currentToken isSpecial and: [currentToken value = $)])
 		ifTrue: 
-			[node addParenthesis: (leftParen to: currentToken start).
+			[node addParenthesis: (startToken start to: currentToken start).
 			self step.
 			node]
-		ifFalse: [ ^ (self parserError: ''')'' expected') start: leftParen; stop: currentToken stop; value:'( ', node formattedCode]
+		ifFalse: [ ^errorBlock ifNil: [ self parserError: ''')'' expected']
+					  				  ifNotNil: [ self parseEnglobingError: (OrderedCollection with: node) with: startToken]]
 ]
 
 { #category : #'private-parsing' }
 TPRBParser >> parsePragma [
 	"Method called by parsePragmas which already verified that current token is the special character <"
-	| start pragma |
-	start := currentToken start.
+	| startToken pragma |
+	startToken := currentToken.
 	self step.
 	pragma := self basicParsePragma.
 	(currentToken isBinary and: [ currentToken value == #> ]) 
-		ifFalse: [ ^ self addPragma: (self parserError: '''>'' expected') ].
-	pragma left: start; right: currentToken start.
+		ifFalse: [  ^self addPragma: (errorBlock ifNil: [ self parserError: '''>'' expected']
+					  						 ifNotNil: [ self parseEnglobingError: (OrderedCollection with: pragma) with: startToken])].
+	pragma left: startToken start; right: currentToken start.
 	self addPragma: pragma.
 ]
 
@@ -900,22 +892,20 @@ TPRBParser >> parseStatements: pragmaBoolean [
 
 { #category : #'private-parsing' }
 TPRBParser >> parseStatements: pragmaBoolean into: aSequenceNode [
-	| temps leftBar rightBar errorNode |
+	| temps leftBar rightBar errorNode startToken |
 	temps := #().
 	leftBar := rightBar := nil.
 	currentToken isBinary 
 		ifTrue: 
 			[currentToken value = #| 
 				ifTrue: 
-					[leftBar := currentToken start.
+					[ startToken := currentToken.
+					leftBar := currentToken start.
 					self step.
 					temps := self parseTemps.
 					(currentToken isBinary and: [currentToken value = #|]) 
-						ifFalse: [ errorNode := self parserError: '''|'' expected'.
-									  errorNode value: '| '.
-									  temps do: [:each | errorNode value: errorNode value, each formattedCode, ' '].
-									  errorNode start: leftBar.
-									  errorNode stop: currentToken stop.
+						ifFalse: [ errorNode := errorBlock ifNil: [ self parserError: '''|'' expected']
+					  						 ifNotNil: [ self parseEnglobingError: temps with: startToken].
 									 aSequenceNode addFaultyNode: errorNode.
 									 temps := #().
 									 leftBar := nil.

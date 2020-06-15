@@ -28,6 +28,11 @@ TPErrorNodeStyler >> borderColor [
 	^Color red
 ]
 
+{ #category : #'as yet unclassified' }
+TPErrorNodeStyler >> demo [
+	"statements mes; 2; isNil".
+]
+
 { #category : #defaults }
 TPErrorNodeStyler >> highlightColor [
 	^nil
