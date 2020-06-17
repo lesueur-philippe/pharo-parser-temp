@@ -500,7 +500,7 @@ TPRBParser >> parseIncompleteExpression: priorStatementsNode [
 		ifTrue: [ priorStatementsNode ]
 		ifFalse:
 			[ | errorNode |
-			errorNode := self parserError: 'Unknown input at end 21'.
+			errorNode := self parserError: 'Unknown input at end'.
 			errorNode ifNotNil: [ priorStatementsNode statements: priorStatementsNode statements , {errorNode} ].
 			priorStatementsNode ]
 ]
@@ -846,8 +846,7 @@ TPRBParser >> parseStatementList: pragmaBoolean into: sequenceNode [
 	[currentToken isSpecial and: [currentToken value = $.]] whileTrue: 
 		[periods add: currentToken start.
 		self step].
-	[self atEnd 
-		or: [currentToken isSpecial and: ['])}' includes: currentToken value] ]] 
+	[self atEnd] 
 			whileFalse: [
 				return ifTrue: [ 
 					(self parserError: 'End of statement list encountered') 
@@ -866,17 +865,28 @@ TPRBParser >> parseStatementList: pragmaBoolean into: sequenceNode [
 									value: self parseAssignment.
 						statements add: node.
 						return := true]
-					ifFalse: [node := self parseAssignment.
-								statements add: node ].
+					ifFalse: [(currentToken isSpecial and: ['])}' includes: currentToken value]) ifFalse: [node := self parseAssignment.
+								statements add: node ]].
 				(currentToken isSpecial and: [currentToken value = $.]) 
 					ifTrue: 
 						[periods add: currentToken start.
 						self step.
 						self addCommentsTo: node]
-					ifFalse: [return := true].
+					ifFalse: [(currentToken isSpecial and: ['])}' includes: currentToken value])
+									ifTrue: [ statements add: (currentToken value = ']' 
+										ifTrue: [ errorBlock 
+											ifNil: [ self parserError: 'opening expected before closure ', currentToken value]
+					  						ifNotNil: [ | errorNode | errorNode := self parseEnglobingError: statements with: currentToken. statements := OrderedCollection new. errorNode] ]
+										ifFalse: [ errorBlock 
+											ifNil: [ self parserError: 'opening expected before closure', currentToken value]
+					  				  		ifNotNil: [ statements isEmpty 
+												ifFalse: [| errorNode | errorNode := self parseEnglobingError: (OrderedCollection with:statements last) with: currentToken. statements removeLast. errorNode] 
+												ifTrue: [ self parseEnglobingError: statements with: currentToken] ] ]). 
+										self step.]
+									ifFalse: [return := true]].
 				[currentToken isSpecial and: [currentToken value = $.]] whileTrue: 
 					[periods add: currentToken start.
-					self step]
+					self step].
 				].
 	statements notEmpty ifTrue: [self addCommentsTo: statements last].
 	sequenceNode

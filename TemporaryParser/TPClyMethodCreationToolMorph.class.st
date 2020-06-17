@@ -2,7 +2,8 @@ Class {
 	#name : #TPClyMethodCreationToolMorph,
 	#superclass : #ClyMethodEditorToolMorph,
 	#instVars : [
-		'methodClass'
+		'methodClass',
+		'state'
 	],
 	#category : #TemporaryParser
 }
@@ -83,6 +84,12 @@ TPClyMethodCreationToolMorph >> editingText [
 	^methodClass sourceCodeTemplate
 ]
 
+{ #category : #initialization }
+TPClyMethodCreationToolMorph >> initialize [
+	super initialize.
+	state := false.
+]
+
 { #category : #testing }
 TPClyMethodCreationToolMorph >> isSimilarTo: anotherBrowserTool [
 	(super isSimilarTo: anotherBrowserTool) ifFalse: [ ^false ].
@@ -138,16 +145,29 @@ TPClyMethodCreationToolMorph >> setUpTargetClasses [
 
 { #category : #'events handling' }
 TPClyMethodCreationToolMorph >> textChanged: aTextChanged [
-	| ast compilationContext compilationContextOptions |
+	"To avoid parsing the ast of a the pending text at every input, we use a small automaton with 2 	 	states. state 1 : text is being changed so the presence of a separator triggers the 							ast update and changes to state 2.
+			  state 2 : just received a separator so other separators don't trigger an update a change 							which is not a separator changes state to state 1.
+	The exception being a deletion, AST is updated at every deletion."
+	aTextChanged text isEmpty ifTrue: [ self updateASTStyler.]
+									 ifFalse: [ | char | char := aTextChanged text first.
+					state ifTrue: [ (char isSeparator or: char isClosePunctuation) 
+										ifTrue: [ self updateASTStyler. state := false. ] ] 
+						   ifFalse: [ (char isSeparator or: char isClosePunctuation)
+										ifFalse: [ state := true ] ] ].
 	super textChanged: aTextChanged.
+]
+
+{ #category : #'as yet unclassified' }
+TPClyMethodCreationToolMorph >> updateASTStyler [
+	| ast compilationContext compilationContextOptions |
 	ast := TPRBParser parseFaultyMethod: self pendingText.
 	compilationContext := OpalCompiler new compilationContext.
 	compilationContextOptions := CompilationContext defaultOptions copy.
 	compilationContextOptions add: #optionSkipSemanticWarnings.
 	compilationContext setOptions: compilationContextOptions.
 	compilationContext semanticAnalyzerClass new
-   compilationContext: compilationContext;
-   analyze: ast.
+ 	compilationContext: compilationContext;
+  	analyze: ast.
 	textMorph segments copy do: #delete.
 	TPIconStyler styleText: textModel withAst: ast.
 ]
