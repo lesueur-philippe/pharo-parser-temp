@@ -9,6 +9,8 @@ Class {
 
 { #category : #'as yet unclassified' }
 TPRBEnglobingErrorNode class >> error: aToken withNodes: aCollection [
+	"Realise a selection between the different englobing error node classes possible according to the 
+	 received token. If the value of the token is not recognised, we create an undetermined one."
 	('()' includes: aToken value)
 		ifTrue: [ ^TPRBParenthesisErrorNode error: aToken withNodes: aCollection ].
 	('[]' includes: aToken value)
@@ -23,6 +25,7 @@ TPRBEnglobingErrorNode class >> error: aToken withNodes: aCollection [
 		ifTrue: [ ^TPRBTemporariesErrorNode error: aToken withNodes: aCollection ].
 	('<' = aToken value asString)
 		ifTrue: [ ^TPRBPragmaErrorNode error: aToken withNodes: aCollection ].
+	^self new content: aCollection; start: aCollection first start; stop: aToken stop; errorMessage: 'complementary of''',aToken value,''' expected'
 ]
 
 { #category : #accessing }

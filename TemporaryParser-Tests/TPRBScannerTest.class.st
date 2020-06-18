@@ -353,11 +353,11 @@ TPRBScannerTest >> testNextDoesNotAddTabToComments [
 ]
 
 { #category : #testError }
-TPRBScannerTest >> testNextDollarSignErrorHasNoValue [
+TPRBScannerTest >> testNextDollarSignErrorHasDollarValue [
 	| scanner token |
 	scanner := self buildScannerForText: '$'.
 	token := scanner next.
-	self assert: token value equals: ''.
+	self assert: token value equals: '$'.
 ]
 
 { #category : #testError }
@@ -405,7 +405,7 @@ TPRBScannerTest >> testNextErrorStopAtErrorCharacter [
 	| scanner token |
 	scanner := self buildScannerForText: '$'.
 	token := scanner next.
-	self assert: token stop equals: 1.
+	self assert: token stop equals: 2.
 	
 	scanner := self buildScannerForText: '#123alpha'.
 	token := scanner next.
@@ -827,7 +827,7 @@ TPRBScannerTest >> testNextLiteralBeginningWithDigitThrowsError [
 	scanner := self buildScannerForText: '#123alpha'.
 	token := scanner next.
 	self assert: token isError.
-	self assert: token value equals: '1'.
+	self assert: token value equals: '#'.
 	self assert: token cause equals: 'Expecting a literal type'.
 ]
 
@@ -837,7 +837,7 @@ TPRBScannerTest >> testNextLiteralBeginningWithSpecialThrowsError [
 	scanner := self buildScannerForText: '#^'.
 	token := scanner next.
 	self assert: token isError.
-	self assert: token value equals: '^'.
+	self assert: token value equals: '#'.
 	self assert: token cause equals: 'Expecting a literal type'.
 ]
 
@@ -847,7 +847,7 @@ TPRBScannerTest >> testNextLiteralBeginningWithUnknownThrowsError [
 	scanner := self buildScannerForText: '#`'.
 	token := scanner next.
 	self assert: token isError.
-	self assert: token value equals: '`'.
+	self assert: token value equals: '#'.
 	self assert: token cause equals: 'Expecting a literal type'.
 ]
 
@@ -981,7 +981,7 @@ TPRBScannerTest >> testNextLiteralCharacterWithAMissingCharacter [
 	source := '$'.
 	scanner := self buildScannerForText: source.
 	scannedToken := scanner next.
-	self verifyErrorToken: scannedToken message: 'A Character was expected' translated valueExpected: ''
+	self verifyErrorToken: scannedToken message: 'A Character was expected' translated valueExpected: '$'
 
 ]
 
@@ -1573,7 +1573,7 @@ TPRBScannerTest >> testNextWithAWrongSymbolGetError [
 	source := '#^'.
 	scanner := self buildScannerForText: source.
 	scannedToken := scanner next.
-	self verifyErrorToken: scannedToken message: 'Expecting a literal type' translated valueExpected: '^'
+	self verifyErrorToken: scannedToken message: 'Expecting a literal type' translated valueExpected: '#'
 ]
 
 { #category : #tests }

@@ -375,7 +375,6 @@ TPRBScanner >> scanComment [
 TPRBScanner >> scanError: theCause [
 	"An error token accepts every character given, recognised or not."
 	"The value of an error token is one character maximum : the current character."
-	"Prefixes like # and $ don't appear."
 	| location |
 	"error location is the next not parseable character. Or current stream position + 1 if 
 	an expected character is missing."

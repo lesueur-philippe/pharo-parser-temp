@@ -496,13 +496,27 @@ TPRBParser >> parseIncompleteExpression: priorStatementsNode [
 	"some incomplete expressions followed. Add a parserError node
  to the prior statements, but not if priopriorStatementsNode  is already 
  an errorNode"
-	 ^ priorStatementsNode isFaulty
+	 | statements error |
+	statements := priorStatementsNode statements copy.
+	 priorStatementsNode isFaulty
 		ifTrue: [ priorStatementsNode ]
 		ifFalse:
-			[ | errorNode |
-			errorNode := self parserError: 'Unknown input at end 21'.
-			errorNode ifNotNil: [ priorStatementsNode statements: priorStatementsNode statements , {errorNode} ].
-			priorStatementsNode ]
+			[ error := ((currentToken isSpecial and: ['])}' includes: currentToken value])
+									ifTrue: [ currentToken value = $] 
+										ifTrue: [ errorBlock 
+											ifNil: [ self parserError: 'opening expected before closure ', currentToken value]
+					  						ifNotNil: [ | errorNode | errorNode := self parseEnglobingError: statements with: currentToken.  statements := OrderedCollection new. errorNode] ]
+										ifFalse: [ errorBlock 
+											ifNil: [ self parserError: 'opening expected before closure', currentToken value]
+					  				  		ifNotNil: [ statements isEmpty 
+												ifFalse: [| errorNode | errorNode := self parseEnglobingError: (OrderedCollection with: statements last) with: currentToken.  statements removeLast. errorNode] 
+												ifTrue: [ self parseEnglobingError: statements with: currentToken] ] ] ] 			
+									ifFalse: [ self parserError: 'Unknown input at end' ])].
+	statements add: error.
+	self step.
+	priorStatementsNode statements: statements.
+	^self atEnd ifTrue: [ priorStatementsNode ] 
+				  ifFalse: [ self parseStatementList: false into: priorStatementsNode ]
 ]
 
 { #category : #'private-parsing' }
