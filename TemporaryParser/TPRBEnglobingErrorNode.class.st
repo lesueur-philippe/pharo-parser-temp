@@ -28,6 +28,16 @@ TPRBEnglobingErrorNode class >> error: aToken withNodes: aCollection [
 	^self new content: aCollection; start: aCollection first start; stop: aToken stop; errorMessage: 'complementary of''',aToken value,''' expected'
 ]
 
+{ #category : #visiting }
+TPRBEnglobingErrorNode >> acceptVisitor: aVisitor [
+	[ aVisitor visitEnglobingErrorNode: self ] on: Error do: [super acceptVisitor: aVisitor ].
+]
+
+{ #category : #accessing }
+TPRBEnglobingErrorNode >> content [
+	^content 
+]
+
 { #category : #accessing }
 TPRBEnglobingErrorNode >> content: aCollection [
 	content := aCollection

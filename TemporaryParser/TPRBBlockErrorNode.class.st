@@ -21,6 +21,27 @@ TPRBBlockErrorNode >> isBlockError [
 	^true
 ]
 
+{ #category : #'as yet unclassified' }
+TPRBBlockErrorNode >> repairCollectionFromStart [
+	" The repair process goes through goes through the statements that are compatible with an array.
+	  Begins with all statements included in the array and gets one of every time.
+	  The removed statements are to be added in the sequence node."
+	| collection result removedStatements |
+	collection := self content statements.
+	result := OrderedCollection new.
+	removedStatements := OrderedCollection new.
+	[ collection isNotNil ] whileTrue: [ | statements node | statements := OrderedCollection new.
+													node := TPRBArrayNode statements: collection.
+													node start: self start.
+													statements add: node .
+													result add: statements, removedStatements.
+													removedStatements addFirst: collection last.
+												   collection removeLast. ].
+	result add: removedStatements.
+	^collection.
+	
+]
+
 { #category : #accessing }
 TPRBBlockErrorNode >> value [
 	^  self errorMessage = '''['' expected' ifTrue: [ super value, ']' ] 

@@ -1,11 +1,11 @@
 Class {
 	#name : #TPClyMethodCreationToolMorph,
-	#superclass : #ClyMethodEditorToolMorph,
+	#superclass : #TPClyMethodEditorToolMorph,
 	#instVars : [
 		'methodClass',
 		'state'
 	],
-	#category : #TemporaryParser
+	#category : #'TemporaryParser-Tools'
 }
 
 { #category : #testing }
@@ -121,6 +121,15 @@ TPClyMethodCreationToolMorph >> restoreBrowserState [
 	browser selectClass: methodClass
 ]
 
+{ #category : #accessing }
+TPClyMethodCreationToolMorph >> selectedSourceNode [
+
+	| selectedInterval |
+	selectedInterval := self selectedTextInterval.
+	^(methodClass astForStylingInCalypso bestNodeFor: selectedInterval)
+		ifNil: [ methodClass astForStylingInCalypso ]
+]
+
 { #category : #initialization }
 TPClyMethodCreationToolMorph >> setUpModelFromContext [
 	| selectedGroup |
@@ -162,12 +171,13 @@ TPClyMethodCreationToolMorph >> updateASTStyler [
 	| ast compilationContext compilationContextOptions |
 	ast := TPRBParser parseFaultyMethod: self pendingText.
 	compilationContext := OpalCompiler new compilationContext.
+	compilationContext class: self methodClass.
 	compilationContextOptions := CompilationContext defaultOptions copy.
 	compilationContextOptions add: #optionSkipSemanticWarnings.
 	compilationContext setOptions: compilationContextOptions.
 	compilationContext semanticAnalyzerClass new
  	compilationContext: compilationContext;
-  	analyze: ast.
+  	analyze: ast. 
 	textMorph segments copy do: #delete.
 	TPIconStyler styleText: textModel withAst: ast.
 ]

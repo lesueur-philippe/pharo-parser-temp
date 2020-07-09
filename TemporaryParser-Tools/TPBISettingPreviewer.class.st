@@ -8,7 +8,7 @@ Class {
 		'formattedCheckBox',
 		'sourceCodePane'
 	],
-	#category : #TemporaryParser
+	#category : #'TemporaryParser-Tools'
 }
 
 { #category : #'build ui buttons' }

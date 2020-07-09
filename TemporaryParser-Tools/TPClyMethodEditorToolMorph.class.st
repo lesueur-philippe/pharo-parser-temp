@@ -6,7 +6,7 @@ Class {
 		'extendingPackage',
 		'targetClasses'
 	],
-	#category : #TemporaryParser
+	#category : #'TemporaryParser-Tools'
 }
 
 { #category : #testing }
@@ -203,7 +203,7 @@ TPClyMethodEditorToolMorph >> tagEditingMethod: aMethod [
 
 { #category : #accessing }
 TPClyMethodEditorToolMorph >> tagsAndPackageEditor [
-	^(statusBar findDeeplyA: ClyMethodTagsAndPackageEditorMorph) ifNil: [ CmdCommandAborted signal ]
+	^(statusBar findDeeplyA: TPClyMethodRefactoringEditorMorph) ifNil: [ CmdCommandAborted signal ]
 ]
 
 { #category : #operations }

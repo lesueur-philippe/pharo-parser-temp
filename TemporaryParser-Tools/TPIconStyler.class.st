@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'textModel'
 	],
-	#category : #TemporaryParser
+	#category : #'TemporaryParser-Tools'
 }
 
 { #category : #options }
@@ -132,6 +132,12 @@ TPIconStyler >> visitBlockNode: aBlockNode [
 TPIconStyler >> visitCascadeNode: aCascadeNode [ 
 	self addIconStyle: aCascadeNode.
 	super visitCascadeNode: aCascadeNode.
+]
+
+{ #category : #visiting }
+TPIconStyler >> visitEnglobingErrorNode: anEnglobingNode [
+	self addIconStyle: anEnglobingNode.
+	anEnglobingNode content do: [ :each | each acceptVisitor: self ].
 ]
 
 { #category : #visiting }

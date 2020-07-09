@@ -1,7 +1,7 @@
 Class {
 	#name : #TPErrorNodeStyler,
 	#superclass : #TPIconStyler,
-	#category : #TemporaryParser
+	#category : #'TemporaryParser-Tools'
 }
 
 { #category : #styling }

@@ -282,8 +282,7 @@ TPRBParser >> parseArray [
 	node left: startToken start.
 	self parseStatementList: false  into: node.
 	(currentToken isSpecial and: [currentToken value = $}]) 
-		ifFalse: [ ^errorBlock ifNil: [ self parserError: '''}'' expected']
-					  				  ifNotNil: [ self parseEnglobingError: node statements with: startToken]].
+		ifFalse: [ ^ self parseEnglobingError: node statements with: startToken].
 	node right: currentToken start.
 	self step.
 	^ node
@@ -372,8 +371,7 @@ TPRBParser >> parseBlock [
 	(self parseStatements: false into: node body).
 	
 	(currentToken isSpecial and: [currentToken value = $]])
-		ifFalse: [ ^errorBlock ifNil: [ self parserError: ''']'' expected']
-					  				  ifNotNil: [ self parseEnglobingError: node body statements with: startToken]].
+		ifFalse: [ ^ self parseEnglobingError: node body statements with: startToken].
 	node right: currentToken start.
 	self step.
 	^node
@@ -462,7 +460,8 @@ TPRBParser >> parseCascadeMessage [
 
 { #category : #parsing }
 TPRBParser >> parseEnglobingError: aCollection with: aToken [
-	^ self englobingErrorNodeClass error: aToken withNodes: aCollection.
+	^ errorBlock ifNotNil: [ self englobingErrorNodeClass error: aToken withNodes: aCollection ]
+					 ifNil: [ self parserError: aToken value asString, ' counterpart missing' ].
 ]
 
 { #category : #'error handling' }
@@ -493,30 +492,25 @@ TPRBParser >> parseExpression: anExpressionString [
 
 { #category : #'private-parsing' }
 TPRBParser >> parseIncompleteExpression: priorStatementsNode [
-	"some incomplete expressions followed. Add a parserError node
- to the prior statements, but not if priopriorStatementsNode  is already 
- an errorNode"
+	" This method is used when parsing an expression or a method, if the parsing of the list of statements finishes but there are some tokens left to parse."
 	 | statements error |
 	statements := priorStatementsNode statements copy.
-	 priorStatementsNode isFaulty
-		ifTrue: [ priorStatementsNode ]
-		ifFalse:
-			[ error := ((currentToken isSpecial and: ['])}' includes: currentToken value])
-									ifTrue: [ currentToken value = $] 
-										ifTrue: [ errorBlock 
-											ifNil: [ self parserError: 'opening expected before closure ', currentToken value]
-					  						ifNotNil: [ | errorNode | errorNode := self parseEnglobingError: statements with: currentToken.  statements := OrderedCollection new. errorNode] ]
-										ifFalse: [ errorBlock 
-											ifNil: [ self parserError: 'opening expected before closure', currentToken value]
-					  				  		ifNotNil: [ statements isEmpty 
-												ifFalse: [| errorNode | errorNode := self parseEnglobingError: (OrderedCollection with: statements last) with: currentToken.  statements removeLast. errorNode] 
-												ifTrue: [ self parseEnglobingError: statements with: currentToken] ] ] ] 			
-									ifFalse: [ self parserError: 'Unknown input at end' ])].
+	" Checks if the current token is a closure to create an englobing error node or a parse error node otherwise. "
+	error := ((currentToken isSpecial and: ['])}' includes: currentToken value])
+				" We make a distinction between the bracket and the other closures because blocks are the only ones that can contain multiple statements. "
+				ifTrue: [ currentToken value = $) 
+					ifFalse: [ | errorNode | errorNode := self parseEnglobingError: statements with: currentToken.  statements := OrderedCollection new. errorNode ]
+					ifTrue: [  statements isEmpty 
+							ifFalse: [| errorNode | errorNode := self parseEnglobingError: (OrderedCollection with: statements last) with: currentToken.  statements removeLast. errorNode] 
+							ifTrue: [ self parseEnglobingError: statements with: currentToken] ] ] 			
+				ifFalse: [ self parserError: 'Unknown input at end' ]).
 	statements add: error.
 	self step.
 	priorStatementsNode statements: statements.
 	^self atEnd ifTrue: [ priorStatementsNode ] 
-				  ifFalse: [ self parseStatementList: false into: priorStatementsNode ]
+				  ifFalse: [ self parseStatementList: false into: priorStatementsNode.
+								self atEnd ifFalse: [ self parseIncompleteExpression: priorStatementsNode ]
+											  ifTrue: [ priorStatementsNode ] ]
 ]
 
 { #category : #'private-parsing' }
@@ -598,8 +592,7 @@ TPRBParser >> parseLiteralArray [
 		whileFalse: [literals add: self parseLiteralArrayObject].
 	stop := currentToken stop.
 	(currentToken isSpecial and: [currentToken value = $)]) 
-		ifFalse: [ ^errorBlock ifNil: [ self parserError: ''')'' expected']
-					  				  ifNotNil: [ self parseEnglobingError: literals with: startToken]].
+		ifFalse: [ ^ self parseEnglobingError: literals with: startToken].
 	self step.
 	^self literalArrayNodeClass 
 		startPosition: startToken start
@@ -637,8 +630,7 @@ TPRBParser >> parseLiteralByteArray [
 		"Put literal value nodes corresponding to the bytes in the stream."
 		whileFalse: [stream nextPut: self parseLiteralByteArrayObject].
 	(currentToken isSpecial and: [currentToken value = $]]) 
-		ifFalse: [ ^self errorBlock ifNil: [ self parserError: ''']'' expected']
-					  						 ifNotNil: [ self parseEnglobingError: stream contents with: startToken]].
+		ifFalse: [ ^ self parseEnglobingError: stream contents with: startToken].
 	stop := currentToken stop.
 	self step.
 	^self literalArrayNodeClass 
@@ -708,7 +700,7 @@ TPRBParser >> parseMethod: aMethodDefinitionString [
 	node source: aMethodDefinitionString.
 	self atEnd
 		ifFalse: [ 
-			 ^ self parseIncompleteExpression: node ].
+			 ^ self parseIncompleteExpression: node body].
 	node source: aMethodDefinitionString.
 	^ node
 ]
@@ -740,8 +732,7 @@ TPRBParser >> parseParenthesizedExpression [
 			[node addParenthesis: (startToken start to: currentToken start).
 			self step.
 			node]
-		ifFalse: [ ^errorBlock ifNil: [ self parserError: ''')'' expected']
-					  				  ifNotNil: [ self parseEnglobingError: (OrderedCollection with: node) with: startToken]]
+		ifFalse: [ ^ self parseEnglobingError: (OrderedCollection with: node) with: startToken]
 ]
 
 { #category : #'private-parsing' }
@@ -752,8 +743,7 @@ TPRBParser >> parsePragma [
 	self step.
 	pragma := self basicParsePragma.
 	(currentToken isBinary and: [ currentToken value == #> ]) 
-		ifFalse: [  ^self addPragma: (errorBlock ifNil: [ self parserError: '''>'' expected']
-					  						 ifNotNil: [ self parseEnglobingError: (OrderedCollection with: pragma) with: startToken])].
+		ifFalse: [  ^self addPragma: ( self parseEnglobingError: (OrderedCollection with: pragma) with: startToken)].
 	pragma left: startToken start; right: currentToken start.
 	self addPragma: pragma.
 ]
@@ -817,6 +807,7 @@ TPRBParser >> parsePrimitiveLiteral [
 
 { #category : #'private-parsing' }
 TPRBParser >> parsePrimitiveObject [
+	| errorNode |
 	currentToken isIdentifier ifTrue: [^self parsePrimitiveIdentifier].
 	(currentToken isLiteralToken and: [currentToken isMultiKeyword not]) 
 		ifTrue: [^self parsePrimitiveLiteral].
@@ -825,12 +816,14 @@ TPRBParser >> parsePrimitiveObject [
 			[^currentToken isForByteArray 
 				ifTrue: [self parseLiteralByteArray]
 				ifFalse: [self parseLiteralArray]].
-	currentToken isSpecial
+	(currentToken isSpecial and: ('[({' includes: currentToken value))
 		ifTrue: 
 			[currentToken value = $[ ifTrue: [^self saveCommentsDuring:[self parseBlock]].
 			currentToken value = $( ifTrue: [^self parseParenthesizedExpression].
 			currentToken value = ${ ifTrue: [^self parseArray]].
-	^ self parserError: 'Variable or expression expected'
+	errorNode := self parserError: 'Variable or expression expected'.
+	self step. 
+	^errorNode.
 ]
 
 { #category : #'private-parsing' }
@@ -907,7 +900,7 @@ TPRBParser >> parseStatements: pragmaBoolean [
 { #category : #'private-parsing' }
 TPRBParser >> parseStatements: pragmaBoolean into: aSequenceNode [
 	| temps leftBar rightBar errorNode startToken |
-	temps := #().
+	temps := OrderedCollection new.
 	leftBar := rightBar := nil.
 	currentToken isBinary 
 		ifTrue: 
@@ -918,10 +911,9 @@ TPRBParser >> parseStatements: pragmaBoolean into: aSequenceNode [
 					self step.
 					temps := self parseTemps.
 					(currentToken isBinary and: [currentToken value = #|]) 
-						ifFalse: [ errorNode := errorBlock ifNil: [ self parserError: '''|'' expected']
-					  						 ifNotNil: [ self parseEnglobingError: temps with: startToken].
+						ifFalse: [ errorNode :=  self parseEnglobingError: temps with: startToken.
 									 aSequenceNode addFaultyNode: errorNode.
-									 temps := #().
+									 temps := OrderedCollection new.
 									 leftBar := nil.
 								    ]
 						ifTrue: [ rightBar := currentToken start ].

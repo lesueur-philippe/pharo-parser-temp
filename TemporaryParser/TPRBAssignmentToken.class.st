@@ -18,3 +18,8 @@ TPRBAssignmentToken >> length [
 
 	^ 2
 ]
+
+{ #category : #evaluating }
+TPRBAssignmentToken >> value [
+	^ ':='
+]

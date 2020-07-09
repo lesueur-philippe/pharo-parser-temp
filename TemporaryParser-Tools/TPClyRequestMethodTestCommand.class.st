@@ -1,7 +1,7 @@
 Class {
 	#name : #TPClyRequestMethodTestCommand,
 	#superclass : #ClyMethodEditorCommand,
-	#category : #TemporaryParser
+	#category : #'TemporaryParser-Tools'
 }
 
 { #category : #testing }
@@ -14,7 +14,7 @@ TPClyRequestMethodTestCommand class >> canBeExecutedInMethodEditor: aTool [
 TPClyRequestMethodTestCommand class >> methodEditorShorcutActivation [
 	<classAnnotation>
 	
-	^CmdShortcutActivation by: $e meta, $p meta for: ClyTextEditorContext
+	^CmdShortcutActivation by: $a meta, $u meta for: ClyTextEditorContext
 ]
 
 { #category : #accessing }

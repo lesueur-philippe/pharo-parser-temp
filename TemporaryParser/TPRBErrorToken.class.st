@@ -7,7 +7,8 @@ Class {
 	#superclass : #TPRBValueToken,
 	#instVars : [
 		'cause',
-		'location'
+		'location',
+		'totot'
 	],
 	#category : #'TemporaryParser-Tokens'
 }

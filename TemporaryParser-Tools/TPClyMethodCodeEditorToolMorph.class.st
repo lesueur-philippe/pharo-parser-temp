@@ -1,10 +1,10 @@
 Class {
 	#name : #TPClyMethodCodeEditorToolMorph,
-	#superclass : #ClyMethodEditorToolMorph,
+	#superclass : #TPClyMethodEditorToolMorph,
 	#instVars : [
 		'editingMethod'
 	],
-	#category : #TemporaryParser
+	#category : #'TemporaryParser-Tools'
 }
 
 { #category : #activation }
@@ -313,12 +313,13 @@ TPClyMethodCodeEditorToolMorph >> textChanged: aTextChanged [
 	super textChanged: aTextChanged.
 	ast := TPRBParser parseFaultyMethod: self pendingText.
 	compilationContext := OpalCompiler new compilationContext.
+	compilationContext class: self methodClass.
 	compilationContextOptions := CompilationContext defaultOptions copy.
 	compilationContextOptions add: #optionSkipSemanticWarnings.
 	compilationContext setOptions: compilationContextOptions.
 	compilationContext semanticAnalyzerClass new
-   compilationContext: compilationContext;
-   analyze: ast.
+ 	compilationContext: compilationContext;
+  	analyze: ast. 
 	textMorph segments copy do: #delete.
 	TPIconStyler styleText: textModel withAst: ast.
 ]

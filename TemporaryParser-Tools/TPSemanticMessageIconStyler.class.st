@@ -1,7 +1,7 @@
 Class {
 	#name : #TPSemanticMessageIconStyler,
 	#superclass : #TPIconStyler,
-	#category : #TemporaryParser
+	#category : #'TemporaryParser-Tools'
 }
 
 { #category : #styling }

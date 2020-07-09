@@ -38,13 +38,8 @@ Class {
 TPRBComment class >> with: aCommentToken [
 	"To respect the previously implemented comment node content, 
 	 we strip the surrounding quotes of the comment."
-	| str cpystr |
-	str := aCommentToken value.
-	cpystr := str size > 2 
-		ifTrue: [str copyFrom:2 to: str size - 1]
-		ifFalse: [''].
 	^ self new
-		with: cpystr from: aCommentToken start to: aCommentToken stop;
+		with: aCommentToken value from: aCommentToken start to: aCommentToken stop;
 		yourself. 
 	
 ]
