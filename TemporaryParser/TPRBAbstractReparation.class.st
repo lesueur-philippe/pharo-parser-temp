@@ -29,12 +29,11 @@ TPRBAbstractReparation >> repair: aNode [
 
 { #category : #'as yet unclassified' }
 TPRBAbstractReparation >> reparse: aString [
-	TPRBParser parseFaultyMethod: aString.
-]
-
-{ #category : #'as yet unclassified' }
-TPRBAbstractReparation >> reparseSemantics: aNode [
-	self context semanticAnalyzerClass new
-   compilationContext: self context;
-   analyze: aNode methodNode.
+	| ast |
+	ast := TPRBParser parseFaultyMethod: aString.
+	context semanticAnalyzerClass new
+   compilationContext: context;
+   analyze: ast.
+	ast compilationContext: context.
+	^ast
 ]

@@ -6,6 +6,7 @@ Class {
 
 { #category : #'as yet unclassified' }
 TPRBRepairDefineAsInstanceVariable >> repair: aVariableNode [
-	aVariableNode methodNode compilationContext class addInstVarNamed: aVariableNode name.
-	self reparseSemantics: aVariableNode.
+	self context: aVariableNode methodNode compilationContext.
+	self context class addInstVarNamed: aVariableNode name.
+	self reparse: aVariableNode source.
 ]

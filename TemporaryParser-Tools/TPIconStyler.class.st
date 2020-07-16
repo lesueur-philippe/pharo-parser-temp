@@ -137,7 +137,7 @@ TPIconStyler >> visitCascadeNode: aCascadeNode [
 { #category : #visiting }
 TPIconStyler >> visitEnglobingErrorNode: anEnglobingNode [
 	self addIconStyle: anEnglobingNode.
-	anEnglobingNode content do: [ :each | each acceptVisitor: self ].
+	anEnglobingNode content do: [ :each | self visitNode: each ].
 ]
 
 { #category : #visiting }

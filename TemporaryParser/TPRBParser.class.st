@@ -70,7 +70,7 @@ TPRBParser class >> parseFaultyMethod: aString [
 	ast := self parseMethod: aString onError: self errorNodeBlock.
 	"make sure to return a RBMethodNode"
 	^ ast class == TPRBMethodNode
-		ifFalse: [ TPRBMethodNode selector: #faulty body: ast asSequenceNode ]
+		ifFalse: [ (TPRBMethodNode selector: #faulty body: ast asSequenceNode) source: aString ]
 		ifTrue: [ ast ]
 ]
 
