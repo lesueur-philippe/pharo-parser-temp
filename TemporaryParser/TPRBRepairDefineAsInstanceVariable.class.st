@@ -1,12 +1,12 @@
 Class {
 	#name : #TPRBRepairDefineAsInstanceVariable,
-	#superclass : #TPRBAbstractReparation,
+	#superclass : #TPRBSemanticReparation,
 	#category : #'TemporaryParser-Repartions'
 }
 
 { #category : #'as yet unclassified' }
 TPRBRepairDefineAsInstanceVariable >> repair: aVariableNode [
 	self context: aVariableNode methodNode compilationContext.
-	self context class addInstVarNamed: aVariableNode name.
-	self reparse: aVariableNode source.
+	self context getClass addInstVarNamed: aVariableNode name.
+	^ self redoSemanticsFor: aVariableNode methodNode.
 ]

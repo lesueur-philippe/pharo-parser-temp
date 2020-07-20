@@ -203,6 +203,21 @@ TPClyMethodCodeEditorToolMorph >> findSourceNodeAt: aCursorPoint [
 	^(ast bestNodeFor: (startPosition to: endPosition)) ifNil: [ ast ]
 ]
 
+{ #category : #'as yet unclassified' }
+TPClyMethodCodeEditorToolMorph >> getASTFor: aString [
+	| compilationContext compilationContextOptions ast |
+	ast :=TPRBParser parseFaultyMethod: aString.
+	compilationContext := OpalCompiler new compilationContext.
+	compilationContext class: self methodClass.
+	compilationContextOptions := CompilationContext defaultOptions copy.
+	compilationContextOptions add: #optionSkipSemanticWarnings.
+	compilationContext setOptions: compilationContextOptions.
+	compilationContext semanticAnalyzerClass new
+ 	compilationContext: compilationContext;
+  	analyze: ast.
+	^ ast
+]
+
 { #category : #testing }
 TPClyMethodCodeEditorToolMorph >> isCommandAvailable: aCommand [ 
 
@@ -309,17 +324,9 @@ TPClyMethodCodeEditorToolMorph >> switchToMethod: aMethod [
 
 { #category : #'events handling' }
 TPClyMethodCodeEditorToolMorph >> textChanged: aTextChanged [
-	| ast compilationContext compilationContextOptions |
+	| ast |
 	super textChanged: aTextChanged.
-	ast := TPRBParser parseFaultyMethod: self pendingText.
-	compilationContext := OpalCompiler new compilationContext.
-	compilationContext class: self methodClass.
-	compilationContextOptions := CompilationContext defaultOptions copy.
-	compilationContextOptions add: #optionSkipSemanticWarnings.
-	compilationContext setOptions: compilationContextOptions.
-	compilationContext semanticAnalyzerClass new
- 	compilationContext: compilationContext;
-  	analyze: ast. 
+	ast := self getASTFor: self pendingText.
 	textMorph segments copy do: #delete.
 	TPIconStyler styleText: textModel withAst: ast.
 ]

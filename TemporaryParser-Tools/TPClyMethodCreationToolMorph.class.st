@@ -84,6 +84,21 @@ TPClyMethodCreationToolMorph >> editingText [
 	^methodClass sourceCodeTemplate
 ]
 
+{ #category : #'as yet unclassified' }
+TPClyMethodCreationToolMorph >> getASTFor: aString [
+	| compilationContext compilationContextOptions ast |
+	ast :=TPRBParser parseFaultyMethod: aString.
+	compilationContext := OpalCompiler new compilationContext.
+	compilationContext class: self methodClass.
+	compilationContextOptions := CompilationContext defaultOptions copy.
+	compilationContextOptions add: #optionSkipSemanticWarnings.
+	compilationContext setOptions: compilationContextOptions.
+	compilationContext semanticAnalyzerClass new
+ 	compilationContext: compilationContext;
+  	analyze: ast.
+	^ ast
+]
+
 { #category : #initialization }
 TPClyMethodCreationToolMorph >> initialize [
 	super initialize.
@@ -164,6 +179,11 @@ TPClyMethodCreationToolMorph >> textChanged: aTextChanged [
 						   ifFalse: [ (char isSeparator or: char isClosePunctuation)
 										ifFalse: [ state := true ] ] ].
 	super textChanged: aTextChanged.
+]
+
+{ #category : #'as yet unclassified' }
+TPClyMethodCreationToolMorph >> toto [
+	^1
 ]
 
 { #category : #'as yet unclassified' }

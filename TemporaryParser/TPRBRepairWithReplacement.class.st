@@ -1,9 +1,6 @@
 Class {
 	#name : #TPRBRepairWithReplacement,
-	#superclass : #TPRBAbstractReparation,
-	#instVars : [
-		'replacement'
-	],
+	#superclass : #TPRBSyntaxicReparation,
 	#category : #'TemporaryParser-Repartions'
 }
 
@@ -11,12 +8,6 @@ Class {
 TPRBRepairWithReplacement class >> repair: aNode with: aString [
 	^self new replacement: aString;
 				 repair: aNode.
-]
-
-{ #category : #initialization }
-TPRBRepairWithReplacement >> initialize [ 
-	super initialize.
-	replacement := ''.
 ]
 
 { #category : #'as yet unclassified' }
@@ -27,10 +18,5 @@ TPRBRepairWithReplacement >> repair: aNode [
 									   ifTrue: [ '' ].
 	end := aNode stop = aNode source size ifFalse: [ (aNode source copyFrom: aNode stop + 1 to: aNode source size) ]
 									             ifTrue: [ '' ].
-	^self reparse: (beginning , replacement , end).
-]
-
-{ #category : #accessing }
-TPRBRepairWithReplacement >> replacement: aString [
-	replacement := aString
+	^self reparse: (beginning , self replacement , end).
 ]

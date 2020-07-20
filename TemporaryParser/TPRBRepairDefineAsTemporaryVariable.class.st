@@ -1,6 +1,6 @@
 Class {
 	#name : #TPRBRepairDefineAsTemporaryVariable,
-	#superclass : #TPRBAbstractReparation,
+	#superclass : #TPRBSemanticReparation,
 	#category : #'TemporaryParser-Repartions'
 }
 

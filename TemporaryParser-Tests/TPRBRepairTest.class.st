@@ -1,6 +1,9 @@
 Class {
 	#name : #TPRBRepairTest,
 	#superclass : #TPRBParserTest,
+	#instVars : [
+		'mockClass'
+	],
 	#category : #'TemporaryParser-Tests-Parser'
 }
 
@@ -9,22 +12,34 @@ TPRBRepairTest >> parseFaultyMethodWithSemantic: aString [
 	| ast compilationContext compilationContextOptions |
 	ast := TPRBParser parseFaultyMethod: aString.
 	compilationContext := OpalCompiler new compilationContext.
+	compilationContext class: mockClass.
 	compilationContextOptions := CompilationContext defaultOptions copy.
 	compilationContextOptions add: #optionSkipSemanticWarnings.
 	compilationContext setOptions: compilationContextOptions.
 	compilationContext semanticAnalyzerClass new
-   compilationContext: compilationContext;
-   analyze: ast.
+		compilationContext: compilationContext;
+		analyze: ast.
 	ast compilationContext: compilationContext.
-	^ast
+	^ ast
+]
+
+{ #category : #running }
+TPRBRepairTest >> setUp [
+	super setUp.
+	mockClass := TPRBMockClass new.
 ]
 
 { #category : #'as yet unclassified' }
 TPRBRepairTest >> testRepairForMissingDot [
-	| faultyNode repairedNode |
+	| faultyNode repairedNode reparation |
 	faultyNode := self parseFaultyMethodWithSemantic: 'toto message isNil message := 1+2'.
 	repairedNode := self parseFaultyMethodWithSemantic: 'toto message isNil. message := 1+2'.
-	faultyNode := TPRBRepairWithNewNode repair: faultyNode body statements first receiver with: '.'.
+	
+	reparation := TPRBRepairWithNewNode new.
+	reparation replacement: '.'.
+	
+	faultyNode := reparation repair: faultyNode body statements first receiver.
+	
 	self deny: faultyNode isFaulty.
 	self assert: faultyNode equals: repairedNode.
 ]
@@ -50,13 +65,27 @@ TPRBRepairTest >> testRepairForWrongMessage [
 ]
 
 { #category : #'as yet unclassified' }
-TPRBRepairTest >> testSemanticRepairForUndeclaredInstanceVar [
-	| faultyNode |
+TPRBRepairTest >> testSemanticRepairForUndeclaredClassVar [
+	| faultyNode reparation |
 	faultyNode := self parseFaultyMethodWithSemantic: 'toto message isNil'.
 	faultyNode := faultyNode body statements first receiver.
 	self assert: faultyNode isUndeclared.
-	faultyNode := TPRBRepairDefineAsInstanceVariable repair: faultyNode.
-	self assert: faultyNode isInstanceVariable.
+	reparation := TPRBRepairDefineAsClassVariable new.
+	faultyNode := reparation repair: faultyNode.
+	faultyNode := faultyNode body statements first receiver.
+	self assert: faultyNode isInstance.
+]
+
+{ #category : #'as yet unclassified' }
+TPRBRepairTest >> testSemanticRepairForUndeclaredInstanceVar [
+	| faultyNode reparation |
+	faultyNode := self parseFaultyMethodWithSemantic: 'toto message isNil'.
+	faultyNode := faultyNode body statements first receiver.
+	self assert: faultyNode isUndeclared.
+	reparation := TPRBRepairDefineAsInstanceVariable new.
+	faultyNode := reparation repair: faultyNode.
+	faultyNode := faultyNode body statements first receiver.
+	self assert: faultyNode isInstance.
 ]
 
 { #category : #'as yet unclassified' }
