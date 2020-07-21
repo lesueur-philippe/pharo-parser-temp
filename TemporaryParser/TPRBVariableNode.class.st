@@ -15,6 +15,7 @@ Class {
 	#superclass : #TPRBValueNode,
 	#instVars : [
 		'name',
+		'variable',
 		'start'
 	],
 	#category : #'TemporaryParser-Nodes'

@@ -2,13 +2,14 @@ Extension { #name : #TPRBVariableNode }
 
 { #category : #'*TemporaryParser-OpalExtention' }
 TPRBVariableNode >> binding [
-	^self propertyAt: #binding ifAbsent: [nil].
+	
+	^ variable
 ]
 
 { #category : #'*TemporaryParser-OpalExtention' }
 TPRBVariableNode >> binding: aSemVar [
-	aSemVar ifNil: [^self removeProperty: #binding ifAbsent: []].
-	self propertyAt: #binding put: aSemVar.
+	
+	variable := aSemVar
 ]
 
 { #category : #'*TemporaryParser-OpalExtention' }

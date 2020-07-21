@@ -45,6 +45,5 @@ TPSemanticVariableIconStyler >> iconLabel: aNode [
 
 { #category : #testing }
 TPSemanticVariableIconStyler >> shouldStyleNode: aNode [
-	^ aNode isVariable and: 
-		[ aNode binding isUndeclared ].
+	^ aNode isVariable and: [ aNode binding isUndeclaredVariable ]
 ]

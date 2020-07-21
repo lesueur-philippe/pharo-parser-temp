@@ -67,34 +67,37 @@ TPRBRepairTest >> testRepairForWrongMessage [
 { #category : #'as yet unclassified' }
 TPRBRepairTest >> testSemanticRepairForUndeclaredClassVar [
 	| faultyNode reparation |
-	faultyNode := self parseFaultyMethodWithSemantic: 'toto message isNil'.
+	faultyNode := self parseFaultyMethodWithSemantic:
+		              'toto message isNil'.
 	faultyNode := faultyNode body statements first receiver.
-	self assert: faultyNode isUndeclared.
+	self assert: faultyNode isUndeclaredVariable.
 	reparation := TPRBRepairDefineAsClassVariable new.
 	faultyNode := reparation repair: faultyNode.
 	faultyNode := faultyNode body statements first receiver.
-	self assert: faultyNode isInstance.
+	self assert: faultyNode isInstanceVariable
 ]
 
 { #category : #'as yet unclassified' }
 TPRBRepairTest >> testSemanticRepairForUndeclaredInstanceVar [
 	| faultyNode reparation |
-	faultyNode := self parseFaultyMethodWithSemantic: 'toto message isNil'.
+	faultyNode := self parseFaultyMethodWithSemantic:
+		              'toto message isNil'.
 	faultyNode := faultyNode body statements first receiver.
-	self assert: faultyNode isUndeclared.
+	self assert: faultyNode isUndeclaredVariable.
 	reparation := TPRBRepairDefineAsInstanceVariable new.
 	faultyNode := reparation repair: faultyNode.
 	faultyNode := faultyNode body statements first receiver.
-	self assert: faultyNode isInstance.
+	self assert: faultyNode isInstanceVariable
 ]
 
 { #category : #'as yet unclassified' }
 TPRBRepairTest >> testSemanticRepairForUndeclaredTemporary [
 	| faultyNode |
-	faultyNode := self parseFaultyMethodWithSemantic: 'toto message isNil'.
+	faultyNode := self parseFaultyMethodWithSemantic:
+		              'toto message isNil'.
 	faultyNode := faultyNode body statements first receiver.
-	self assert: faultyNode isUndeclared.
+	self assert: faultyNode isUndeclaredVariable.
 	faultyNode := TPRBRepairDefineAsTemporaryVariable repair: faultyNode.
 	faultyNode := faultyNode body statements first receiver.
-	self assert: faultyNode isTemp.
+	self assert: faultyNode isTemp
 ]
