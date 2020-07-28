@@ -399,7 +399,7 @@ TPRBMessageNode >> replaceSourceWithMessageNode: aNode [
 
 { #category : #accessing }
 TPRBMessageNode >> selector [
-	^ selector.
+	^ selector value.
 ]
 
 { #category : #accessing }
@@ -434,6 +434,11 @@ TPRBMessageNode >> selectorInterval [
 	| positions |
 	positions := self keywordsIntervals. 
 	^positions first first to: positions last last.
+]
+
+{ #category : #'as yet unclassified' }
+TPRBMessageNode >> selectorNode [
+	^selector.
 ]
 
 { #category : #accessing }

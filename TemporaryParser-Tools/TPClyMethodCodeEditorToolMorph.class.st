@@ -106,6 +106,12 @@ TPClyMethodCodeEditorToolMorph >> createTextContext [
 		ifNotNil: [ :astNode | ClyMethodSourceCodeContext for: self selectedNode: astNode]
 ]
 
+{ #category : #'events handling' }
+TPClyMethodCodeEditorToolMorph >> currentEditedAST [
+
+	^ self getASTFor: self pendingText
+]
+
 { #category : #building }
 TPClyMethodCodeEditorToolMorph >> decorateContainerTab [
 	| title |
@@ -344,8 +350,9 @@ TPClyMethodCodeEditorToolMorph >> selectedSourceNode [
 
 	| selectedInterval |
 	selectedInterval := self selectedTextInterval.
-	^(editingMethod astForStylingInCalypso bestNodeFor: selectedInterval)
-		ifNil: [ editingMethod astForStylingInCalypso ]
+
+	^(self currentEditedAST bestNodeFor: selectedInterval)
+		ifNil: [ self currentEditedAST ]
 ]
 
 { #category : #initialization }
@@ -381,7 +388,7 @@ TPClyMethodCodeEditorToolMorph >> switchToMethod: aMethod [
 TPClyMethodCodeEditorToolMorph >> textChanged: aTextChanged [
 	| ast |
 	super textChanged: aTextChanged.
-	ast := self getASTFor: self pendingText.
+	ast := self currentEditedAST.
 	textMorph segments copy do: #delete.
 	TPIconStyler styleText: textModel withAst: ast.
 ]

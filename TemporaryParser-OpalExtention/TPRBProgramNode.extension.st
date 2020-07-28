@@ -1,6 +1,11 @@
 Extension { #name : #TPRBProgramNode }
 
 { #category : #'*TemporaryParser-OpalExtention' }
+TPRBProgramNode >> afterLinks [
+	^ self links select: [ :each | each control == #after ]
+]
+
+{ #category : #'*TemporaryParser-OpalExtention' }
 TPRBProgramNode >> asDoit [
 	"The VM can only evaluate methods. wrap this ast in a doit MethodNode"
 	^TPRBMethodNode 
@@ -29,6 +34,11 @@ TPRBProgramNode >> asSequenceNode [
 ]
 
 { #category : #'*TemporaryParser-OpalExtention' }
+TPRBProgramNode >> beforeLinks [
+	^ self links select: [ :each | each control == #before ]
+]
+
+{ #category : #'*TemporaryParser-OpalExtention' }
 TPRBProgramNode >> doSemanticAnalysis [
 	self methodNode ifNil: [ ^self ].
 	^ self methodNode doSemanticAnalysis.
@@ -42,6 +52,44 @@ TPRBProgramNode >> doSemanticAnalysisIn: aClass [
 ]
 
 { #category : #'*TemporaryParser-OpalExtention' }
+TPRBProgramNode >> hasBreakpoint [
+	
+	self hasMetalinkBefore ifFalse: [ ^false ].
+	^self beforeLinks anySatisfy: [ :link | link metaObject = Break ]
+]
+
+{ #category : #'*TemporaryParser-OpalExtention' }
+TPRBProgramNode >> hasExecutionCounter [
+	
+	self hasMetalinkBefore ifFalse: [ ^false ].
+	^self beforeLinks anySatisfy: [ :link | link metaObject class = ExecutionCounter ]
+]
+
+{ #category : #'*TemporaryParser-OpalExtention' }
+TPRBProgramNode >> hasMetalink [
+	^self hasProperty: #links
+]
+
+{ #category : #'*TemporaryParser-OpalExtention' }
+TPRBProgramNode >> hasMetalinkAfter [
+	self hasMetalink ifFalse: [^false].
+	^self afterLinks isNotEmpty
+]
+
+{ #category : #'*TemporaryParser-OpalExtention' }
+TPRBProgramNode >> hasMetalinkBefore [
+	self hasMetalink ifFalse: [^false].
+	^self beforeLinks isNotEmpty
+]
+
+{ #category : #'*TemporaryParser-OpalExtention' }
+TPRBProgramNode >> hasWatch [
+	
+	self hasMetalinkAfter ifFalse: [ ^false ].
+	^self afterLinks anySatisfy: [ :link | link metaObject class = Watch ]
+]
+
+{ #category : #'*TemporaryParser-OpalExtention' }
 TPRBProgramNode >> irInstruction [
 	^ self methodOrBlockNode ir firstInstructionMatching: [:instr | instr sourceNode == self ]
 ]
@@ -49,6 +97,11 @@ TPRBProgramNode >> irInstruction [
 { #category : #'*TemporaryParser-OpalExtention' }
 TPRBProgramNode >> isClean [
 	^ self children allSatisfy: [ :child | child isClean ]
+]
+
+{ #category : #'*TemporaryParser-OpalExtention' }
+TPRBProgramNode >> links [
+	^self propertyAt: #links ifAbsent: #()
 ]
 
 { #category : #'*TemporaryParser-OpalExtention' }

@@ -13,6 +13,12 @@ TPRBVariableNode >> binding: aSemVar [
 ]
 
 { #category : #'*TemporaryParser-OpalExtention' }
+TPRBVariableNode >> hasBreakpoint [
+	^ (self afterLinks anySatisfy: [ :link | link metaObject = Break ])
+		or: [ super hasBreakpoint ]
+]
+
+{ #category : #'*TemporaryParser-OpalExtention' }
 TPRBVariableNode >> isArg [
 
 	^self binding isArg

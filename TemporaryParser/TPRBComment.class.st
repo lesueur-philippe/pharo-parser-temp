@@ -69,6 +69,11 @@ TPRBComment >> acceptVisitor: aProgramNodeVisitor [
 	
 ]
 
+{ #category : #querying }
+TPRBComment >> bestNodeFor: anInterval [ 
+	^self
+]
+
 { #category : #accessing }
 TPRBComment >> contents [
 	"The content of a comment node doesn't contain the quotes surrounding the comment.
@@ -82,6 +87,11 @@ TPRBComment >> intersectsInterval: anInterval [
 	
 	^(anInterval first between: self start and: self stop) 
 		or: [ self start between: anInterval first and: anInterval last ]
+]
+
+{ #category : #testing }
+TPRBComment >> isCommentNode [ 
+	^true
 ]
 
 { #category : #printing }

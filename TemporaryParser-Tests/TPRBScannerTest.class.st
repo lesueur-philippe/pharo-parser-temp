@@ -22,15 +22,15 @@ TPRBScannerTest >> testCommentTokenHasTheRightValue [
 	| scanner token |
 	scanner := self buildScannerForText: String tab, ' "simple comment" firstToken'.
 	token := scanner next comments first.
-	self assert: token value equals: '"simple comment"'.
+	self assert: token value equals: 'simple comment'.
 	
 	scanner := self buildScannerForText: String tab, ' """nested at beggining"" comment" firstToken'.
 	token := scanner next comments first.
-	self assert: token value equals: '"""nested at beggining"" comment"'.
+	self assert: token value equals: '""nested at beggining"" comment'.
 	
 	scanner := self buildScannerForText: String tab, ' "comment ""nested at end""" firstToken'.
 	token := scanner next comments first.
-	self assert: token value equals: '"comment ""nested at end"""'.
+	self assert: token value equals: 'comment ""nested at end""'.
 	
 ]
 

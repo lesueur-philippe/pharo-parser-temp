@@ -238,18 +238,18 @@ TPRBParserTest >> testCascadeWithInvalidSelectorRaisesError [
 	"The presence of an error in a cascade (when parsingFaulty) parses the cascade until the end and stores the error node inside 	 the cascade."
 	self assert: tree messages first isMessage.
 	self assert: tree messages first receiver name equals: #faulty.
-	self assert: tree messages first selector equals: (TPRBSelectorNode value: #cascade).
+	self assert: tree messages first selectorNode equals: (TPRBSelectorNode value: #cascade).
 	
 	self assert: tree messages second isMessage.
 	self assert: tree messages second receiver name equals: #faulty.
-	self assert: tree messages second selector equals: (TPRBSelectorNode value: #repared).
+	self assert: tree messages second selectorNode equals: (TPRBSelectorNode value: #repared).
 	
 	self assert: tree messages third isFaulty.
 	self assert: tree messages third errorMessage equals: 'Message expected'.
 	
 	self assert: tree messages last isMessage.
 	self assert: tree messages last receiver name equals: #faulty.
-	self assert: tree messages last selector equals: (TPRBSelectorNode value: #node).
+	self assert: tree messages last selectorNode equals: (TPRBSelectorNode value: #node).
 ]
 
 { #category : #'garbage tests' }
@@ -262,18 +262,18 @@ TPRBParserTest >> testCascadeWithMissingSelectorRaisesError [
 	"The presence of an error in a cascade (when parsingFaulty) parses the cascade until the end and stores the error node inside 	 the cascade."
 	self assert: tree messages first isMessage.
 	self assert: tree messages first receiver name equals: #faulty.
-	self assert: tree messages first selector equals: (TPRBSelectorNode value: #cascade).
+	self assert: tree messages first selectorNode equals: (TPRBSelectorNode value: #cascade).
 	
 	self assert: tree messages second isMessage.
 	self assert: tree messages second receiver name equals: #faulty.
-	self assert: tree messages second selector equals: (TPRBSelectorNode value: #repared).
+	self assert: tree messages second selectorNode equals: (TPRBSelectorNode value: #repared).
 	
 	self assert: tree messages third isFaulty.
 	self assert: tree messages third errorMessage equals: 'Message expected'.
 	
 	self assert: tree messages last isMessage.
 	self assert: tree messages last receiver name equals: #faulty.
-	self assert: tree messages last selector equals: (TPRBSelectorNode value: #node).
+	self assert: tree messages last selectorNode equals: (TPRBSelectorNode value: #node).
 ]
 
 { #category : #'error testing' }
@@ -454,7 +454,7 @@ TPRBParserTest >> testGarbageForgottenDotAfterAssignement [
 	error := child first value receiver arguments first.
 	self assert: error isMessage.
 	self assert: error receiver value equals: 2.
-	self assert: error selector equals: (TPRBSelectorNode value: #temp)
+	self assert: error selectorNode equals: (TPRBSelectorNode value: #temp)
 	
 	
 	
@@ -1202,7 +1202,7 @@ indicate the invalid expression."
 
 { #category : #'to be reworked' }
 TPRBParserTest >> testParserErrors [
-	#(#('self foo. + 3' 11) #('#(' 3) #('self 0' 6) #('self asdf;;asfd' 11)) 
+	#(#('self foo. + 3' 11) #('#(' 2) #('self 0' 6) #('self asdf;;asfd' 11)) 
 		do: [:each | self parseError: each]
 ]
 
@@ -1453,8 +1453,8 @@ TPRBParserTest >> testSelectorFromMessageIsSelectorNode [
 	| tree |
 	tree := self parseExpression: 'receiver selector'.
 	self assert: tree isMessage.
-	self assert: tree selector isSelector.
-	self assert: tree selector value equals: #selector.
+	self assert: tree selectorNode isSelector.
+	self assert: tree selector equals: #selector.
 ]
 
 { #category : #testCascade }

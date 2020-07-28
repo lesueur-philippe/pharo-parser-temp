@@ -5,6 +5,11 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
+TPRBNestedComments class >> nest: aString [
+	^self new nest: aString.
+]
+
+{ #category : #'as yet unclassified' }
 TPRBNestedComments >> nest: aString [
 	| result stream |
 	result := WriteStream with: ''.

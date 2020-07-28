@@ -59,7 +59,7 @@ TPRBRepairTest >> testRepairForWrongMessage [
 	| faultyNode repairedNode |
 	faultyNode := self parseFaultyMethodWithSemantic: 'toto message isNil. message := 1+2'.
 	repairedNode := self parseFaultyMethodWithSemantic: 'toto message isNotNil. message := 1+2'.
-	faultyNode := TPRBRepairWithNewNode repair: faultyNode body statements first selector with: ' isNotNil'.
+	faultyNode := TPRBRepairWithNewNode repair: faultyNode body statements first selectorNode with: ' isNotNil'.
 	self deny: faultyNode isFaulty.
 	self assert: faultyNode equals: repairedNode.
 ]
@@ -74,7 +74,7 @@ TPRBRepairTest >> testSemanticRepairForUndeclaredClassVar [
 	reparation := TPRBRepairDefineAsClassVariable new.
 	faultyNode := reparation repair: faultyNode.
 	faultyNode := faultyNode body statements first receiver.
-	self assert: faultyNode isInstanceVariable
+	self assert: faultyNode isLiteralVariable
 ]
 
 { #category : #'as yet unclassified' }

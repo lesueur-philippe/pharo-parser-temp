@@ -162,7 +162,8 @@ TPRBProgramNode >> bestNodeFor: anInterval [
 
 	^ selectedChildren size = 1 
 		ifTrue: [ selectedChildren first bestNodeFor: anInterval ]
-		ifFalse: [ self ]
+		ifFalse: [ selectedChildren := self comments select: [ :each | each intersectsInterval: anInterval ]. selectedChildren size > 0 ifTrue: [ selectedChildren first bestNodeFor: anInterval  ] 
+													ifFalse: [ self ] ]
 ]
 
 { #category : #querying }
@@ -411,6 +412,11 @@ TPRBProgramNode >> isBlockVar [
 
 { #category : #testing }
 TPRBProgramNode >> isCascade [
+	^false
+]
+
+{ #category : #testing }
+TPRBProgramNode >> isCommentNode [
 	^false
 ]
 
