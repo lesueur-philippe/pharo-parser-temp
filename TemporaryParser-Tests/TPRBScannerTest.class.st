@@ -93,11 +93,11 @@ TPRBScannerTest >> testMultipleCommentTokensAreWellSeparated [
 	comments := scanner next comments.
 	token := comments first.
 	self assert: token isComment.
-	self assert: token value equals: '"first comment"'.
+	self assert: token value equals: 'first comment'.
 	
 	token := comments second.
 	self assert: token isComment.
-	self assert: token value equals: '" second comment"'.
+	self assert: token value equals: ' second comment'.
 ]
 
 { #category : #testLiteral }
@@ -1624,7 +1624,7 @@ TPRBScannerTest >> testNextWithTwoDoubleQuotesInComment [
 	self
 		shouldnt: [ token := (self buildScannerForText: source) next ]
 		raise: SyntaxErrorNotification.
-	self assert: token comments first value equals: '"only the"" opening"'.
+	self assert: token comments first value equals: 'only the"" opening'.
 ]
 
 { #category : #tests }
